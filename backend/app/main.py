@@ -6,16 +6,16 @@
 
 from fastapi import FastAPI
 import uvicorn
-from app.core.config import SETTING
-
+from app.core.config import setting
 
 app = FastAPI(title="LabFlow", version="0.1.0")
 
 if __name__ == "__main__":
-    setting:SETTING = SETTING()
+    app_env = setting.app_env
+
     uvicorn.run(
         "app.main:app",
-        host=setting.app_env.HOST,
-        port=setting.app_env.PORT,
-        reload=setting.app_env.RELOAD,
+        host=app_env.HOST,
+        port=app_env.PORT,
+        reload=app_env.RELOAD,
     )
