@@ -5,18 +5,13 @@
 # Description: 环境配置
 
 import os
-from dotenv import load_dotenv
-from .validators import EnvironmentValidators
-
-load_dotenv()
+from .validators import Validator
 
 
 class AppEnv:
     def __init__(self):
-        self.HOST: str = EnvironmentValidators.host_validator(
-            os.getenv("HOST", "0.0.0.0")
-        )
-        self.PORT: int = EnvironmentValidators.port_validator(os.getenv("PORT", "8000"))
-        self.RELOAD: bool = EnvironmentValidators.bool_validator(
+        self.HOST: str = Validator.host_validator("HOST", os.getenv("HOST", "0.0.0.0"))
+        self.PORT: int = Validator.port_validator("PORT", os.getenv("PORT", "8000"))
+        self.RELOAD: bool = Validator.bool_validator(
             "RELOAD", os.getenv("RELOAD", "False")
         )

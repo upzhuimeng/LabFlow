@@ -4,9 +4,17 @@
 # Author: zhuimeng
 # Description: 配置聚合
 
+from dotenv import load_dotenv
 from .environments import AppEnv
+from .database import DatabaseSetting
+
+load_dotenv()
 
 
-class SETTING:
+class Setting:
     def __init__(self):
-        self.app_env:AppEnv = AppEnv()
+        self.app_env: AppEnv = AppEnv()
+        self.db_setting: DatabaseSetting = DatabaseSetting()
+
+
+setting = Setting()
