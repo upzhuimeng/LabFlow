@@ -1,3 +1,5 @@
+//仪器列表页
+
 'use client';
 
 import InstrumentTable from './components/Instrument_Card';

@@ -27,12 +27,11 @@ export default function InstrumentCardList({instruments, permissions}) {
         {/* 卡片列表 */}
         <div className="grid grid-cols-1 gap-4">
             {instruments.map((inst) => (
-                <div key={inst.id} className="border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300">
+                <div key={inst.id}
+                     className="border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300">
                     <div className="flex justify-between items-start mb-2">
-                        <h2 className="text-lg font-semibold">
-                            <a href={`/instruments/${inst.id}`} className="text-blue-600 hover:underline">
-                                {inst.name}
-                            </a>
+                        <h2 className="text-lg font-semibold  text-blue-600">
+                            {inst.name}
                         </h2>
                         <Status status={inst.status} className="text-base px-5 py-2"/>
                     </div>
