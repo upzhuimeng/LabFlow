@@ -13,11 +13,9 @@ const MOCK_INSTRUMENTS = [
 ];
 
 export default function InstrumentsPage() {
-    const permissions = MOCK_PERMISSIONS;
-
     return (
         <div className="container mx-auto p-6">
-            <InstrumentTable instruments={MOCK_INSTRUMENTS} permissions={permissions} />
+            <InstrumentTable instruments={MOCK_INSTRUMENTS} permissions={MOCK_PERMISSIONS} />
         </div>
     );
 }
