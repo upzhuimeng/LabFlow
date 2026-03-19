@@ -3,7 +3,7 @@
 'use client';
 
 import { useState ,useMemo} from 'react';
-import { useInstruments } from '../context/InstrumentContext';
+import { useInstruments } from '@/app/(dashboard)/instrument/context/InstrumentContext';
 import Status from './Status';
 import ActionButtons from './ActionButtons';
 import InstrumentModal from './InstrumentModal';

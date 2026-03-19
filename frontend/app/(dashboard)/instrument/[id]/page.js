@@ -6,8 +6,8 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useInstruments } from '../context/InstrumentContext';
-import StatusBadge from '../components/Status';
-import InstrumentModal from '../components/InstrumentModal';
+import StatusBadge from '@/components/Status';
+import InstrumentModal from '@/components/InstrumentModal';
 
 // 模拟权限
 const MOCK_PERMISSIONS = ['create_asset', 'edit_info', 'edit_status', 'apply_transfer'];
