@@ -36,7 +36,7 @@ class Reservation(Base):
     purpose: Mapped[str | None] = mapped_column(TEXT, comment="使用目的")
 
     status: Mapped[int] = mapped_column(
-        SMALLINT, server_default="0", comment="状态(0-审批中 1-通过 2-拒绝)"
+        SMALLINT, server_default="0", comment="状态(0-审批中 1-通过 2-拒绝 3-已取消)"
     )
 
     current_level: Mapped[int] = mapped_column(
@@ -45,10 +45,12 @@ class Reservation(Base):
         comment="审核阶段(数字为正在审批的层级，0-保存且未提交申请 3-通过所有审批)",
     )
 
+    is_deleted: Mapped[int] = mapped_column(
+        SMALLINT, server_default="0", comment="软删除标记(0-正常 1-已删除)"
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False, comment="创建时间"
     )
 
-    updated_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=False, comment="更新时间"
-    )
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, comment="更新时间")

@@ -21,7 +21,7 @@ class TagLog(Base):
         ForeignKey("tag.id"), nullable=False, index=True, comment="标签ID"
     )
 
-    operator_id: Mapped[int] = mapped_column(
+    operator_id: Mapped[int | None] = mapped_column(
         ForeignKey("user.id"), index=True, comment="操作人ID"
     )
 

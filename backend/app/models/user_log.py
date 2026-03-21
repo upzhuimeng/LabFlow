@@ -45,6 +45,6 @@ class UserLog(Base):
         SMALLINT, comment="是否启用(0-正常 1-封禁 2-注销)"
     )
 
-    create_at: Mapped[datetime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, index=True, comment="操作时间"
     )

@@ -6,9 +6,8 @@
 
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import DECIMAL, SMALLINT, DateTime, Integer, ForeignKey, String
+from sqlalchemy import DECIMAL, SMALLINT, DateTime, Integer, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.sql.operators import comparison_op
 from app.db.base import Base
 
 
@@ -20,14 +19,14 @@ class InstrumentLog(Base):
     )
 
     instrument_id: Mapped[int] = mapped_column(
-        ForeignKey("instrument.id"), nullable=True, index=True, comment="仪器ID"
+        ForeignKey("instrument.id"), nullable=False, index=True, comment="仪器ID"
     )
 
     operator_id: Mapped[int | None] = mapped_column(
         ForeignKey("user.id"), index=True, comment="操作人ID"
     )
 
-    action: Mapped[int] = mapped_column(
+    action: Mapped[str] = mapped_column(
         String(20), nullable=False, comment="操作类型(create/update/delete)"
     )
 
@@ -49,8 +48,12 @@ class InstrumentLog(Base):
 
     lab_id: Mapped[int] = mapped_column(ForeignKey("lab.id"), comment="所属实验室")
 
-    remark: Mapped[str] = mapped_column(String(255), comment="备注")
+    remark: Mapped[str | None] = mapped_column(String(255), comment="备注")
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, index=True, comment="操作时间"
+        DateTime,
+        index=True,
+        nullable=False,
+        server_default=func.now(),
+        comment="操作时间",
     )

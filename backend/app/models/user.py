@@ -26,7 +26,9 @@ class User(Base):
     )
 
     role: Mapped[int] = mapped_column(
-        SmallInteger, server_default="0", comment="角色 0-普通用户 1-管理员"
+        SmallInteger,
+        server_default="2",
+        comment="角色（0-超级管理员 1-管理员 2-实验员）",
     )
 
     phone: Mapped[str] = mapped_column(
@@ -37,7 +39,7 @@ class User(Base):
         String(255), unique=True, index=True, comment="邮箱"
     )
 
-    avater_url: Mapped[str | None] = mapped_column(String(511), comment="头像")
+    avatar_url: Mapped[str | None] = mapped_column(String(255), comment="头像")
 
     is_active: Mapped[int] = mapped_column(
         SmallInteger, server_default="0", comment="是否启用，0-启用，1-封禁，2-注销"

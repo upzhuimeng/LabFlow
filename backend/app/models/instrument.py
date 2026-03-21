@@ -23,10 +23,10 @@ class Instrument(Base):
     model: Mapped[str] = mapped_column(String(100), nullable=False, comment="仪器型号")
 
     manufacturer: Mapped[str] = mapped_column(
-        String(200), nullable=False, comment="厂商"
+        String(255), nullable=False, comment="厂商"
     )
 
-    supplier: Mapped[str] = mapped_column(String(100), nullable=False, comment="供应商")
+    supplier: Mapped[str] = mapped_column(String(255), nullable=False, comment="供应商")
 
     purchase_date: Mapped[datetime | None] = mapped_column(DateTime, comment="采购时间")
 
@@ -42,7 +42,7 @@ class Instrument(Base):
     )
 
     lab_id: Mapped[int] = mapped_column(
-        ForeignKey("lab.id"), index=False, nullable=False, comment="所属实验室"
+        ForeignKey("lab.id"), index=True, nullable=False, comment="所属实验室"
     )
 
     remark: Mapped[str | None] = mapped_column(String(255), comment="备注")

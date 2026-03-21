@@ -25,8 +25,8 @@ class LabUserLog(Base):
         ForeignKey("lab.id"), nullable=False, index=True, comment="实验室ID"
     )
 
-    user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("user.id"), index=True, comment="用户ID"
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("user.id"), nullable=False, index=True, comment="用户ID"
     )
 
     operator_id: Mapped[int | None] = mapped_column(

@@ -18,15 +18,19 @@ class TagUserLog(Base):
     )
 
     tag_user_id: Mapped[int] = mapped_column(
-        Integer, nullable=False, comment="被操作的记录ID"
+        Integer, nullable=False, index=True, comment="被操作的记录ID"
     )
 
-    tag_id: Mapped[int | None] = mapped_column(ForeignKey("tag.id"), comment="标签ID")
+    tag_id: Mapped[int] = mapped_column(
+        ForeignKey("tag.id"), nullable=False, index=True, comment="标签ID"
+    )
 
-    user_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"), comment="用户ID")
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("user.id"), nullable=False, index=True, comment="用户ID"
+    )
 
     operator_id: Mapped[int | None] = mapped_column(
-        ForeignKey("user.id"), comment="操作人ID"
+        ForeignKey("user.id"), index=True, comment="操作人ID"
     )
 
     action: Mapped[str] = mapped_column(
@@ -34,5 +38,5 @@ class TagUserLog(Base):
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, comment="操作时间"
+        DateTime, nullable=False, index=True, comment="操作时间"
     )

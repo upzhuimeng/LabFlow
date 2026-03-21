@@ -18,10 +18,12 @@ class LabLog(Base):
     )
 
     lab_id: Mapped[int] = mapped_column(
-        ForeignKey("lab_id"), nullable=False, comment="实验室ID"
+        ForeignKey("lab.id"), nullable=False, index=True, comment="实验室ID"
     )
 
-    operator_id: Mapped[int] = mapped_column(ForeignKey("user.id"), comment="操作人ID")
+    operator_id: Mapped[int | None] = mapped_column(
+        ForeignKey("user.id"), index=True, comment="操作人ID"
+    )
 
     action: Mapped[str] = mapped_column(
         String(20), nullable=False, comment="操作类型(create/update/delete)"
@@ -35,12 +37,18 @@ class LabLog(Base):
 
     status: Mapped[int] = mapped_column(SMALLINT, comment="状态(0-正常 1-维护 2-停用)")
 
-    tag_id: Mapped[int] = mapped_column(ForeignKey("tag.id"), comment="标签")
+    tag_id: Mapped[int] = mapped_column(
+        ForeignKey("tag.id"), index=True, comment="标签"
+    )
 
     keyword: Mapped[str] = mapped_column(String(255), comment="关键词")
 
     description: Mapped[str] = mapped_column(TEXT, comment="实验室说明")
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, server_default=func.now(), comment="操作时间"
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        index=True,
+        comment="操作时间",
     )

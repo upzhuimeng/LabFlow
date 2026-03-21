@@ -28,6 +28,6 @@ class TagUser(Base):
         ForeignKey("user.id"), nullable=False, comment="用户ID"
     )
 
-    create_at: Mapped[datetime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, comment="创建时间"
     )

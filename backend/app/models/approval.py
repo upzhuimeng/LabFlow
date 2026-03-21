@@ -21,8 +21,8 @@ class Approval(Base):
         ForeignKey("reservation.id"), nullable=False, index=True, comment="预约ID"
     )
 
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("user.id"), nullable=False, comment="审批人ID"
+    approver_id: Mapped[int] = mapped_column(
+        ForeignKey("user.id"), nullable=False, index=True, comment="审批人ID"
     )
 
     level: Mapped[int] = mapped_column(
