@@ -38,3 +38,7 @@ class DatabaseSetting:
     @property
     def DB_URL(self):
         return f"mysql+asyncmy://{self.USER}:{self.PWD}@{self.HOST}:{self.PORT}/{self.NAME}"
+
+    @property
+    def SYNC_DB_URL(self):
+        return f"mysql+pymysql://{self.USER}:{self.PWD}@{self.HOST}:{self.PORT}/{self.NAME}"
