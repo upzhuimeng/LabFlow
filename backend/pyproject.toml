@@ -14,5 +14,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "alembic>=1.18.4",
     "pytest>=9.0.2",
 ]
