@@ -8,7 +8,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from app.exceptions.business import BusinessError
-from app.schemas.common import BaseResponse
+from app.schemas.base import BaseResponse
 
 
 async def business_error_handler(request: Request, exc: BusinessError) -> JSONResponse:
