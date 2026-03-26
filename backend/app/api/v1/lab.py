@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import Session_Local
 from app.services.lab import *
 from app.schemas.lab import *
-from app.api.deps import  get_current_user
+from app.api.deps import  get_current_user,require_role
 from app.models.user import User
 
 
@@ -11,12 +11,6 @@ async def get_db():
     async with Session_Local() as session:
         yield session
 
-def require_role(max_role: int):
-    async def checker(user: User = Depends(get_current_user)):
-        if user.role > max_role:
-            raise BusinessError("权限不足")
-        return user
-    return checker
 
 router = APIRouter(prefix="/labs", tags=["实验室"])
 
