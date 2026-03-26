@@ -9,7 +9,7 @@ from fastapi import Request, Depends
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from app.db.session import Session_Local
 from app.models.user import User
-from app.exceptions.business import AuthError
+from app.exceptions.business import AuthError,BusinessError
 from app.core.security import decode_token
 from app.crud import user as user_crud
 
@@ -35,3 +35,10 @@ async def get_current_user(
         raise AuthError("用户不存在")
 
     return user
+
+def require_role(max_role: int):
+    async def checker(user: User = Depends(get_current_user)):
+        if user.role > max_role:
+            raise BusinessError("权限不足")
+        return user
+    return checker
