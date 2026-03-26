@@ -27,3 +27,6 @@ class NotFoundError(BusinessError):
 
 class AlreadyExistsError(BusinessError):
     code: int = 409
+
+class ForbiddenError(BusinessError):
+    code = 403
