@@ -9,10 +9,11 @@ import ActionButtons from './ActionButtons';
 import InstrumentModal from './InstrumentModal';
 
 export default function InstrumentCardList({ instruments, permissions }) {
-    const { addInstrument, updateInstrument } = useInstruments();
+    const { addInstrument, updateInstrument, deleteInstrument } = useInstruments();
     const [modalOpen, setModalOpen] = useState(false);
     const [editingInstrument, setEditingInstrument] = useState(null); // null 表示新增
     const [searchTerm, setSearchTerm] = useState('');
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
 
     const isAdmin = permissions.includes('edit_info');
     const canCreate = permissions.includes('create_asset');
@@ -32,6 +33,17 @@ export default function InstrumentCardList({ instruments, permissions }) {
     const handleEdit = (instrument) => {
         setEditingInstrument(instrument);
         setModalOpen(true);
+    };
+
+    const handleDelete = (instrument) => {
+        setDeleteConfirm(instrument);
+    };
+
+    const confirmDelete = () => {
+        if (deleteConfirm) {
+            deleteInstrument(deleteConfirm.id);
+            setDeleteConfirm(null);
+        }
     };
 
     // 提交表单（新增或编辑）
@@ -115,7 +127,12 @@ export default function InstrumentCardList({ instruments, permissions }) {
 
                         {/* 操作按钮 */}
                         <div className="mt-3 flex justify-end">
-                            <ActionButtons instrument={inst} permissions={permissions} onEdit={handleEdit} />
+                            <ActionButtons 
+                                instrument={inst} 
+                                permissions={permissions} 
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                            />
                         </div>
                     </div>
                 ))}
@@ -129,6 +146,31 @@ export default function InstrumentCardList({ instruments, permissions }) {
                 initialData={editingInstrument}
                 variant={editingInstrument ? 'quick' : 'full'} // 列表页编辑使用快速表单，新增使用完整表单
             />
+
+            {deleteConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+                    <div className="bg-white p-6 rounded-lg w-full max-w-md">
+                        <h3 className="text-lg font-semibold mb-4">确认删除</h3>
+                        <p className="mb-6">
+                            确定要删除设备"{deleteConfirm.name}"吗？此操作无法撤销。
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setDeleteConfirm(null)}
+                                className="px-4 py-2 border rounded hover:bg-gray-50"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                            >
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

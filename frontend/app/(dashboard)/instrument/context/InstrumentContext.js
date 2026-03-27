@@ -53,8 +53,12 @@ export function InstrumentProvider({ children }) {
         setInstruments(instruments.map(inst => inst.id === id ? { ...inst, ...updatedData } : inst));
     };
 
+    const deleteInstrument = (id) => {
+        setInstruments(instruments.filter(inst => inst.id !== id));
+    };
+
     return (
-        <InstrumentContext.Provider value={{ instruments, addInstrument, updateInstrument }}>
+        <InstrumentContext.Provider value={{ instruments, addInstrument, updateInstrument, deleteInstrument }}>
             {children}
         </InstrumentContext.Provider>
     );
