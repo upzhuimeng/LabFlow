@@ -89,6 +89,10 @@ export function InstrumentProvider({ children }) {
         }
     },[]);
 
+    const deleteInstrument = (id) => {
+        setInstruments(instruments.filter(inst => inst.id !== id));
+    };
+
     return (
         <InstrumentContext.Provider
             value={{
