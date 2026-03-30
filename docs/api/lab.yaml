@@ -1,0 +1,384 @@
+openapi: 3.0.3
+info:
+  title: Lab API
+  description: 实验室管理相关接口
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Development Server
+
+paths:
+  /lab:
+    get:
+      summary: 获取实验室列表
+      description: 分页获取实验室列表
+      tags:
+        - Lab
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: 页码
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+          description: 每页数量
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: integer
+            enum: [0, 1, 2]
+            default: null
+          description: 实验室状态筛选 (0-正常, 1-维护, 2-停用)
+
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Lab'
+                      total:
+                        type: integer
+                        example: 100
+                      page:
+                        type: integer
+                        example: 1
+                      page_size:
+                        type: integer
+                        example: 10
+              example:
+                code: 200
+                message: success
+                data:
+                  items:
+                    - id: 1
+                      name: 化学实验室 A
+                      address: A 楼 302
+                      capacity: 20
+                      status: 0
+                      manager: 张教授
+                      phone: 010-12345678
+                      description: 主要用于化学实验教学和科研
+                      created_at: "2024-01-15T10:30:00Z"
+                      updated_at: "2024-01-15T10:30:00Z"
+                  total: 1
+                  page: 1
+                  page_size: 10
+
+    post:
+      summary: 创建实验室
+      description: 创建新实验室
+      tags:
+        - Lab
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - address
+                - capacity
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  description: 实验室名称
+                  example: 化学实验室 A
+                address:
+                  type: string
+                  maxLength: 255
+                  description: 地址
+                  example: A 楼 302
+                capacity:
+                  type: integer
+                  minimum: 1
+                  description: 可容纳人数
+                  example: 20
+                status:
+                  type: integer
+                  enum: [0, 1, 2]
+                  description: 状态 (0-正常, 1-维护, 2-停用)
+                  default: 0
+                manager:
+                  type: string
+                  maxLength: 100
+                  description: 负责人
+                  example: 张教授
+                phone:
+                  type: string
+                  maxLength: 50
+                  description: 联系电话
+                  example: 010-12345678
+                description:
+                  type: string
+                  maxLength: 500
+                  description: 描述
+                  example: 主要用于化学实验教学和科研
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabResponse'
+              example:
+                code: 200
+                message: success
+                data:
+                  id: 1
+                  name: 化学实验室 A
+                  address: A 楼 302
+                  capacity: 20
+                  status: 0
+                  manager: 张教授
+                  phone: 010-12345678
+                  description: 主要用于化学实验教学和科研
+                  created_at: "2024-01-15T10:30:00Z"
+                  updated_at: "2024-01-15T10:30:00Z"
+
+  /lab/{id}:
+    get:
+      summary: 获取实验室详情
+      description: 根据ID获取实验室详细信息
+      tags:
+        - Lab
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 实验室ID
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabResponse'
+              example:
+                code: 200
+                message: success
+                data:
+                  id: 1
+                  name: 化学实验室 A
+                  address: A 楼 302
+                  capacity: 20
+                  status: 0
+                  manager: 张教授
+                  phone: 010-12345678
+                  description: 主要用于化学实验教学和科研
+                  instruments:
+                    - id: 1
+                      name: 高效液相色谱仪
+                      model: Agilent 1260
+                      status: 0
+                  created_at: "2024-01-15T10:30:00Z"
+                  updated_at: "2024-01-15T10:30:00Z"
+        '404':
+          description: 实验室不存在
+          content:
+            application/json:
+              example:
+                code: 404
+                message: 实验室不存在
+                data: null
+
+    put:
+      summary: 更新实验室
+      description: 根据ID更新实验室信息
+      tags:
+        - Lab
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 实验室ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  description: 实验室名称
+                address:
+                  type: string
+                  maxLength: 255
+                  description: 地址
+                capacity:
+                  type: integer
+                  minimum: 1
+                  description: 可容纳人数
+                status:
+                  type: integer
+                  enum: [0, 1, 2]
+                  description: 状态 (0-正常, 1-维护, 2-停用)
+                manager:
+                  type: string
+                  maxLength: 100
+                  description: 负责人
+                phone:
+                  type: string
+                  maxLength: 50
+                  description: 联系电话
+                description:
+                  type: string
+                  maxLength: 500
+                  description: 描述
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabResponse'
+
+    delete:
+      summary: 删除实验室
+      description: 根据ID删除实验室（软删除）
+      tags:
+        - Lab
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 实验室ID
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              example:
+                code: 200
+                message: 实验室删除成功
+                data: null
+
+components:
+  schemas:
+    Lab:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 实验室ID
+        name:
+          type: string
+          description: 实验室名称
+        address:
+          type: string
+          description: 地址
+        capacity:
+          type: integer
+          description: 可容纳人数
+        status:
+          type: integer
+          enum: [0, 1, 2]
+          description: 状态 (0-正常, 1-维护, 2-停用)
+        manager:
+          type: string
+          description: 负责人
+        phone:
+          type: string
+          description: 联系电话
+        description:
+          type: string
+          description: 描述
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    LabResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 实验室ID
+        name:
+          type: string
+          description: 实验室名称
+        address:
+          type: string
+          description: 地址
+        capacity:
+          type: integer
+          description: 可容纳人数
+        status:
+          type: integer
+          enum: [0, 1, 2]
+          description: 状态 (0-正常, 1-维护, 2-停用)
+        manager:
+          type: string
+          description: 负责人
+        phone:
+          type: string
+          description: 联系电话
+        description:
+          type: string
+          description: 描述
+        instruments:
+          type: array
+          description: 实验室下的仪器列表
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              model:
+                type: string
+              status:
+                type: integer
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+
+tags:
+  - name: Lab
+    description: 实验室管理相关接口

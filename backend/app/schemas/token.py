@@ -9,14 +9,18 @@ from app.exceptions.business import AuthError
 
 
 class LoginRequest(BaseModel):
-    phone: str = Field(..., description="手机号")
+    phone: str | None = Field(None, description="手机号")
+    email: str | None = Field(None, description="邮箱")
     password: str = Field(..., min_length=1, description="密码")
 
     @model_validator(mode="after")
-    def validate_phone(self):
-        phone = self.phone
-        if not phone.isdigit() or len(phone) != 11:
+    def validate_login_param(self):
+        if not self.phone and not self.email:
+            raise AuthError("请提供手机号或邮箱")
+        if self.phone and (not self.phone.isdigit() or len(self.phone) != 11):
             raise AuthError("手机号必须为11位数字")
+        if self.email and "@" not in self.email:
+            raise AuthError("邮箱格式不正确")
         return self
 
 

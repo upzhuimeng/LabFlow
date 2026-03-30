@@ -6,6 +6,7 @@
 
 import re
 from pydantic import BaseModel, Field, model_validator
+from datetime import datetime
 from app.exceptions.business import RegisterError
 
 
@@ -32,3 +33,29 @@ class UserCreate(BaseModel):
             raise RegisterError("密码必须包含至少一个数字")
 
         return self
+
+
+class UserUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=30, description="用户名")
+    email: str | None = Field(None, max_length=255, description="邮箱")
+    avatar_url: str | None = Field(None, max_length=255, description="头像URL")
+    role: int | None = Field(
+        None, ge=0, le=2, description="角色(0-超管,1-管理员,2-实验员)"
+    )
+    is_active: int | None = Field(
+        None, ge=0, le=2, description="状态(0-正常,1-封禁,2-注销)"
+    )
+
+
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    role: int
+    phone: str
+    email: str | None
+    avatar_url: str | None
+    is_active: int
+    last_login_at: datetime | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

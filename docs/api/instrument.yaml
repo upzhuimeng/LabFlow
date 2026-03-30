@@ -1,0 +1,428 @@
+openapi: 3.0.3
+info:
+  title: Instrument API
+  description: 仪器管理相关接口
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Development Server
+
+paths:
+  /instrument:
+    get:
+      summary: 获取仪器列表
+      description: 分页获取仪器列表
+      tags:
+        - Instrument
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: 页码
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+          description: 每页数量
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: integer
+            enum: [0, 1, 2]
+            default: null
+          description: 仪器状态筛选 (0-正常, 1-维修, 2-停用)
+        - name: lab_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: null
+          description: 实验室ID筛选
+
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Instrument'
+                      total:
+                        type: integer
+                        example: 100
+                      page:
+                        type: integer
+                        example: 1
+                      page_size:
+                        type: integer
+                        example: 10
+              example:
+                code: 200
+                message: success
+                data:
+                  items:
+                    - id: 1
+                      name: 高效液相色谱仪
+                      model: Agilent 1260
+                      manufacturer: Agilent
+                      supplier: 上海仪器公司
+                      purchase_date: "2024-01-15T00:00:00Z"
+                      price: 250000.00
+                      status: 0
+                      lab_id: 1
+                      remark: ""
+                      created_at: "2024-01-15T10:30:00Z"
+                      updated_at: "2024-01-15T10:30:00Z"
+                  total: 1
+                  page: 1
+                  page_size: 10
+
+    post:
+      summary: 创建仪器
+      description: 创建新仪器
+      tags:
+        - Instrument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - model
+                - manufacturer
+                - supplier
+                - price
+                - lab_id
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  description: 仪器名称
+                  example: 高效液相色谱仪
+                model:
+                  type: string
+                  maxLength: 100
+                  description: 型号
+                  example: Agilent 1260
+                manufacturer:
+                  type: string
+                  maxLength: 255
+                  description: 厂商
+                  example: Agilent
+                supplier:
+                  type: string
+                  maxLength: 255
+                  description: 供应商
+                  example: 上海仪器公司
+                purchase_date:
+                  type: string
+                  format: date-time
+                  description: 采购日期
+                  default: null
+                  example: "2024-01-15T00:00:00Z"
+                price:
+                  type: number
+                  format: decimal
+                  description: 价格
+                  example: 250000.00
+                status:
+                  type: integer
+                  enum: [0, 1, 2]
+                  description: 状态 (0-正常, 1-维修, 2-停用)
+                  default: 0
+                lab_id:
+                  type: integer
+                  description: 所属实验室ID
+                  example: 1
+                remark:
+                  type: string
+                  maxLength: 255
+                  description: 备注
+                  default: ""
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentResponse'
+              example:
+                code: 200
+                message: success
+                data:
+                  id: 1
+                  name: 高效液相色谱仪
+                  model: Agilent 1260
+                  manufacturer: Agilent
+                  supplier: 上海仪器公司
+                  purchase_date: "2024-01-15T00:00:00Z"
+                  price: 250000.00
+                  status: 0
+                  lab_id: 1
+                  remark: ""
+                  created_at: "2024-01-15T10:30:00Z"
+                  updated_at: "2024-01-15T10:30:00Z"
+
+  /instrument/{id}:
+    get:
+      summary: 获取仪器详情
+      description: 根据ID获取仪器详细信息
+      tags:
+        - Instrument
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 仪器ID
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentResponse'
+              example:
+                code: 200
+                message: success
+                data:
+                  id: 1
+                  name: 高效液相色谱仪
+                  model: Agilent 1260
+                  manufacturer: Agilent
+                  supplier: 上海仪器公司
+                  purchase_date: "2024-01-15T00:00:00Z"
+                  price: 250000.00
+                  status: 0
+                  lab_id: 1
+                  lab:
+                    id: 1
+                    name: 化学实验室A
+                    address: 实验楼301
+                  remark: ""
+                  created_at: "2024-01-15T10:30:00Z"
+                  updated_at: "2024-01-15T10:30:00Z"
+        '404':
+          description: 仪器不存在
+          content:
+            application/json:
+              example:
+                code: 404
+                message: 仪器不存在
+                data: null
+
+    put:
+      summary: 更新仪器
+      description: 根据ID更新仪器信息
+      tags:
+        - Instrument
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 仪器ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  description: 仪器名称
+                model:
+                  type: string
+                  maxLength: 100
+                  description: 型号
+                manufacturer:
+                  type: string
+                  maxLength: 255
+                  description: 厂商
+                supplier:
+                  type: string
+                  maxLength: 255
+                  description: 供应商
+                purchase_date:
+                  type: string
+                  format: date-time
+                  description: 采购日期
+                price:
+                  type: number
+                  format: decimal
+                  description: 价格
+                status:
+                  type: integer
+                  enum: [0, 1, 2]
+                  description: 状态 (0-正常, 1-维修, 2-停用)
+                lab_id:
+                  type: integer
+                  description: 所属实验室ID
+                remark:
+                  type: string
+                  maxLength: 255
+                  description: 备注
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentResponse'
+
+    delete:
+      summary: 删除仪器
+      description: 根据ID删除仪器（软删除）
+      tags:
+        - Instrument
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 仪器ID
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              example:
+                code: 200
+                message: 仪器删除成功
+                data: null
+
+components:
+  schemas:
+    Instrument:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 仪器ID
+        name:
+          type: string
+          description: 仪器名称
+        model:
+          type: string
+          description: 型号
+        manufacturer:
+          type: string
+          description: 厂商
+        supplier:
+          type: string
+          description: 供应商
+        purchase_date:
+          type: string
+          format: date-time
+          description: 采购日期
+        price:
+          type: number
+          format: decimal
+          description: 价格
+        status:
+          type: integer
+          enum: [0, 1, 2]
+          description: 状态 (0-正常, 1-维修, 2-停用)
+        lab_id:
+          type: integer
+          description: 所属实验室ID
+        remark:
+          type: string
+          description: 备注
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    InstrumentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 仪器ID
+        name:
+          type: string
+          description: 仪器名称
+        model:
+          type: string
+          description: 型号
+        manufacturer:
+          type: string
+          description: 厂商
+        supplier:
+          type: string
+          description: 供应商
+        purchase_date:
+          type: string
+          format: date-time
+          description: 采购日期
+        price:
+          type: number
+          format: decimal
+          description: 价格
+        status:
+          type: integer
+          enum: [0, 1, 2]
+          description: 状态 (0-正常, 1-维修, 2-停用)
+        lab_id:
+          type: integer
+          description: 所属实验室ID
+        lab:
+          type: object
+          description: 所属实验室详情
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            address:
+              type: string
+        remark:
+          type: string
+          description: 备注
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+
+tags:
+  - name: Instrument
+    description: 仪器管理相关接口
