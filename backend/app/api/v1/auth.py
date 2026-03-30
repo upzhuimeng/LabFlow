@@ -23,7 +23,7 @@ async def login(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> BaseResponse:
-    token_data = await authenticate_user(db, req.phone, req.password)
+    token_data = await authenticate_user(db, req.phone, req.email, req.password)
     set_token_cookie(response, token_data.access_token)
     return BaseResponse(data=token_data.model_dump())
 
