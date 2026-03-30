@@ -5,11 +5,12 @@
 # Description: 配置聚合
 
 from dotenv import load_dotenv
+
+load_dotenv()
+
 from .environments import AppEnv
 from .database import DatabaseSetting
 from .security import jwt_settings, JWTSettings
-
-load_dotenv()
 
 
 class Setting:
