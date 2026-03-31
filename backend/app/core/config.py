@@ -11,6 +11,7 @@ load_dotenv()
 from .environments import AppEnv
 from .database import DatabaseSetting
 from .security import jwt_settings, JWTSettings
+from .agents import AgentSetting
 
 
 class Setting:
@@ -18,6 +19,7 @@ class Setting:
         self.app_env: AppEnv = AppEnv()
         self.db_setting: DatabaseSetting = DatabaseSetting()
         self.jwt_settings: JWTSettings = jwt_settings
+        self.agent_setting: AgentSetting = AgentSetting()
 
 
 setting = Setting()
