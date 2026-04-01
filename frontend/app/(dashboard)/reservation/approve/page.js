@@ -33,7 +33,10 @@ export default function ApproveReservationsPage() {
     setError(null);
     try {
       const res = await api.get('/approvals/pending');
-      setReservations(res.data || []);
+      const data = res.data || {};
+      const level1 = data.level1_pending || [];
+      const level2 = data.level2_pending || [];
+      setReservations([...level1, ...level2]);
     } catch (err) {
       setError(err.message || '获取数据失败');
     } finally {
@@ -162,7 +165,7 @@ export default function ApproveReservationsPage() {
             >
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <h2 className="text-lg font-semibold text-blue-600">{reservation.instrument_name}</h2>
+                  <h2 className="text-lg font-semibold text-blue-600">{reservation.lab_name}</h2>
                   <p className="text-sm text-gray-500 mt-1">
                     申请人：{reservation.user_name}
                   </p>
@@ -223,7 +226,7 @@ export default function ApproveReservationsPage() {
               确认操作
             </h3>
             <p className="text-gray-500 text-sm text-center mb-6">
-              确定要{selectedItem.status === 2 ? '拒绝' : '通过'}预约「{selectedItem.instrument_name}」吗？
+              确定要{selectedItem.status === 2 ? '拒绝' : '通过'}预约「{selectedItem.lab_name}」吗？
             </p>
             <div className="flex gap-3">
               <button
