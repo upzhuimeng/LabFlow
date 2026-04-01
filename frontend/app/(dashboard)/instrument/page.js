@@ -7,6 +7,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { STATUS, STATUS_TEXT } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
 import api from '@/lib/api';
@@ -32,6 +33,7 @@ const STATUS_BADGE_CLASS = {
 };
 
 export default function InstrumentPage() {
+  const router = useRouter();
   const toast = useToast();
   const { isAdmin } = useAuth();
   const [instruments, setInstruments] = useState([]);
@@ -111,6 +113,10 @@ export default function InstrumentPage() {
       remark: instrument.remark || '',
     });
     setModalOpen(true);
+  };
+
+  const handleReserve = (instrument) => {
+    router.push(`/reservation/my?instrument_id=${instrument.id}&lab_id=${instrument.lab_id}`);
   };
 
   const handleSubmit = async (e) => {
@@ -246,18 +252,29 @@ export default function InstrumentPage() {
               <div className="border-t border-gray-300/70 my-6"></div>
 
               <div className="mt-3 flex justify-end">
-                <button
-                  onClick={() => handleEdit(instrument)}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors"
-                >
-                  编辑
-                </button>
-                <button
-                  onClick={() => setDeleteConfirm(instrument)}
-                  className="ml-2 px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
-                >
-                  删除
-                </button>
+                {isAdmin ? (
+                  <>
+                    <button
+                      onClick={() => handleEdit(instrument)}
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(instrument)}
+                      className="ml-2 px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                    >
+                      删除
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => handleReserve(instrument)}
+                    className="px-3 py-1.5 text-sm border border-blue-200 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
+                  >
+                    预约
+                  </button>
+                )}
               </div>
             </div>
           ))
