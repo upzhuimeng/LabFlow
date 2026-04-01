@@ -75,7 +75,7 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  const logout = useCallback(async () => {
+const logout = useCallback(async (shouldRedirect = true) => {
     try {
       await fetch(`${config.API_BASE_URL}/auth/logout`, {
         method: 'POST',
@@ -90,9 +90,23 @@ export function AuthProvider({ children }) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
+        if (shouldRedirect) {
+          window.location.href = '/user/login';
+        }
       }
     }
   }, []);
+
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      logout(false);
+      if (typeof window !== 'undefined') {
+        window.location.href = '/user/login';
+      }
+    };
+    window.addEventListener('auth:expired', handleAuthExpired);
+    return () => window.removeEventListener('auth:expired', handleAuthExpired);
+  }, [logout]);
 
   return (
     <AuthContext.Provider

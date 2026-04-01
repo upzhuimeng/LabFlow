@@ -51,6 +51,13 @@ async function request(url, options = {}) {
     const data = await response.json();
     
     if (!response.ok) {
+      if (response.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          window.dispatchEvent(new CustomEvent('auth:expired'));
+        }
+      }
       throw new ApiError(
         response.status,
         data.message || data.detail || `HTTP ${response.status}`,
