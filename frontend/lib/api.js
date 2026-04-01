@@ -26,7 +26,7 @@ async function request(url, options = {}) {
     ? '?' + new URLSearchParams(params).toString()
     : '';
   
-  const fullUrl = `${BASE_URL}${url}${queryString}`;
+  const fullUrl = `${BASE_URL}${url}${url.endsWith('/') ? '' : '/'}${queryString}`;
   
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);

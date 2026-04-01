@@ -48,12 +48,15 @@ function ReservationForm({ labId, instrumentId, onSuccess, onCancel }) {
 
     setSubmitting(true);
     try {
+      const formatdatetimeForApi = (datetimeStr) => {
+        const date = new Date(datetimeStr);
+        return date.toISOString();
+      };
       const payload = {
-        lab_id: labId ? parseInt(labId) : undefined,
-        instrument_id: instrumentId ? parseInt(instrumentId) : undefined,
-        start_time: form.start_time,
-        end_time: form.end_time,
-        purpose: form.purpose,
+        lab_id: labId ? parseInt(labId) : null,
+        start_time: formatdatetimeForApi(form.start_time),
+        end_time: formatdatetimeForApi(form.end_time),
+        purpose: form.purpose || null,
       };
       await api.post('/reservations', payload);
       toast.success('预约提交成功');
