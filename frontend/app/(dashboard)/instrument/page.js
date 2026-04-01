@@ -6,10 +6,13 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { STATUS_TEXT } from '@/lib/constants';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { STATUS, STATUS_TEXT } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
 import api from '@/lib/api';
+import { useToast } from '@/components/Toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const EMPTY_FORM = {
   name: '',
@@ -30,6 +33,9 @@ const STATUS_BADGE_CLASS = {
 };
 
 export default function InstrumentPage() {
+  const router = useRouter();
+  const toast = useToast();
+  const { isAdmin } = useAuth();
   const [instruments, setInstruments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,6 +46,7 @@ export default function InstrumentPage() {
     totalPages: 0,
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingInstrument, setEditingInstrument] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -50,9 +57,14 @@ export default function InstrumentPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get('/instruments', {
-        params: { page: pagination.page, page_size: pagination.pageSize },
-      });
+      const params = { 
+        page: pagination.page, 
+        page_size: pagination.pageSize,
+      };
+      if (activeSearch && activeSearch.trim()) {
+        params.keyword = activeSearch.trim();
+      }
+      const res = await api.get('/instruments', { params });
       const data = res.data;
       setInstruments(data.items || []);
       setPagination(prev => ({
@@ -65,7 +77,7 @@ export default function InstrumentPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize]);
+  }, [pagination.page, pagination.pageSize, activeSearch]);
 
   const fetchLabs = async () => {
     try {
@@ -81,11 +93,16 @@ export default function InstrumentPage() {
     fetchLabs();
   }, [fetchInstruments]);
 
-  const filteredInstruments = searchTerm
-    ? instruments.filter(inst =>
-        inst.name?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : instruments;
+  const handleSearch = () => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+    setActiveSearch(searchTerm);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const handleAdd = () => {
     setEditingInstrument(null);
@@ -109,6 +126,10 @@ export default function InstrumentPage() {
     setModalOpen(true);
   };
 
+  const handleReserve = (instrument) => {
+    router.push(`/reservation/my?instrument_id=${instrument.id}&lab_id=${instrument.lab_id}`);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -127,7 +148,7 @@ export default function InstrumentPage() {
       fetchInstruments();
       fetchLabs();
     } catch (err) {
-      alert(err.message || '保存失败');
+      toast.error(err.message || '保存失败');
     }
   };
 
@@ -138,7 +159,7 @@ export default function InstrumentPage() {
       setDeleteConfirm(null);
       fetchInstruments();
     } catch (err) {
-      alert(err.message || '删除失败');
+      toast.error(err.message || '删除失败');
     }
   };
 
@@ -172,31 +193,36 @@ export default function InstrumentPage() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 gap-3 mb-6">
-        <button
-          onClick={handleAdd}
-          className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          新增设备
-        </button>
+        {isAdmin && (
+          <button
+            onClick={handleAdd}
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            新增设备
+          </button>
+        )}
         <input
           type="text"
           placeholder="搜索设备名称..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+          }}
+          onKeyDown={handleKeyDown}
           className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {filteredInstruments.length === 0 ? (
+        {instruments.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500">
             暂无设备数据
           </div>
         ) : (
-          filteredInstruments.map((instrument) => (
+          instruments.map((instrument) => (
             <div
               key={instrument.id}
               className={`border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 ${
@@ -240,18 +266,29 @@ export default function InstrumentPage() {
               <div className="border-t border-gray-300/70 my-6"></div>
 
               <div className="mt-3 flex justify-end">
-                <button
-                  onClick={() => handleEdit(instrument)}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors"
-                >
-                  编辑
-                </button>
-                <button
-                  onClick={() => setDeleteConfirm(instrument)}
-                  className="ml-2 px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
-                >
-                  删除
-                </button>
+                {isAdmin ? (
+                  <>
+                    <button
+                      onClick={() => handleEdit(instrument)}
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(instrument)}
+                      className="ml-2 px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                    >
+                      删除
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => handleReserve(instrument)}
+                    className="px-3 py-1.5 text-sm border border-blue-200 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
+                  >
+                    预约
+                  </button>
+                )}
               </div>
             </div>
           ))

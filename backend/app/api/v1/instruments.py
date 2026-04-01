@@ -49,13 +49,14 @@ async def list_instruments(
     page_size: int = Query(20, ge=1, le=100),
     status: Optional[int] = Query(None, ge=0, le=2),
     lab_id: Optional[int] = Query(None),
+    keyword: Optional[str] = Query(None, max_length=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """获取仪器列表"""
     skip = (page - 1) * page_size
     instruments, total = await instrument_crud.get_instruments(
-        db, skip, page_size, status, lab_id
+        db, skip, page_size, status, lab_id, keyword
     )
 
     items = [

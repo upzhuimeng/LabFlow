@@ -22,6 +22,7 @@ async def get_labs(
     limit: int = 100,
     status: int | None = None,
     tag_id: int | None = None,
+    keyword: str | None = None,
 ) -> Tuple[List[Lab], int]:
     """获取实验室列表"""
     query = select(Lab)
@@ -31,6 +32,9 @@ async def get_labs(
 
     if tag_id is not None:
         query = query.where(Lab.tag_id == tag_id)
+
+    if keyword and keyword.strip():
+        query = query.where(Lab.name.ilike(f"%{keyword}%"))
 
     total_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(total_query)

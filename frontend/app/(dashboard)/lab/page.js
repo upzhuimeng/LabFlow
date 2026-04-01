@@ -7,8 +7,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { STATUS, STATUS_TEXT } from '@/lib/constants';
 import api from '@/lib/api';
+import { useToast } from '@/components/Toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const EMPTY_FORM = {
   name: '',
@@ -27,6 +30,9 @@ const STATUS_BADGE_CLASS = {
 };
 
 export default function LabPage() {
+  const router = useRouter();
+  const toast = useToast();
+  const { isAdmin } = useAuth();
   const [labs, setLabs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,6 +43,7 @@ export default function LabPage() {
     totalPages: 0,
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingLab, setEditingLab] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -46,9 +53,14 @@ export default function LabPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get('/labs', {
-        params: { page: pagination.page, page_size: pagination.pageSize },
-      });
+      const params = { 
+        page: pagination.page, 
+        page_size: pagination.pageSize,
+      };
+      if (activeSearch && activeSearch.trim()) {
+        params.keyword = activeSearch.trim();
+      }
+      const res = await api.get('/labs', { params });
       const data = res.data;
       setLabs(data.items || []);
       setPagination(prev => ({
@@ -61,18 +73,22 @@ export default function LabPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize]);
+  }, [pagination.page, pagination.pageSize, activeSearch]);
+
+  const handleSearch = () => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+    setActiveSearch(searchTerm);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   useEffect(() => {
     fetchLabs();
   }, [fetchLabs]);
-
-  const filteredLabs = searchTerm
-    ? labs.filter(lab =>
-        lab.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lab.address?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : labs;
 
   const handleAdd = () => {
     setEditingLab(null);
@@ -94,6 +110,10 @@ export default function LabPage() {
     setModalOpen(true);
   };
 
+  const handleReserve = (lab) => {
+    router.push(`/reservation/my?lab_id=${lab.id}`);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -110,7 +130,7 @@ export default function LabPage() {
       setModalOpen(false);
       fetchLabs();
     } catch (err) {
-      alert(err.message || '保存失败');
+      toast.error(err.message || '保存失败');
     }
   };
 
@@ -121,7 +141,7 @@ export default function LabPage() {
       setDeleteConfirm(null);
       fetchLabs();
     } catch (err) {
-      alert(err.message || '删除失败');
+      toast.error(err.message || '删除失败');
     }
   };
 
@@ -155,31 +175,36 @@ export default function LabPage() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 gap-3 mb-6">
-        <button
-          onClick={handleAdd}
-          className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          新增实验室
-        </button>
+        {isAdmin && (
+          <button
+            onClick={handleAdd}
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            新增实验室
+          </button>
+        )}
         <input
           type="text"
           placeholder="搜索实验室名称或地址..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+          }}
+          onKeyDown={handleKeyDown}
           className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {filteredLabs.length === 0 ? (
+        {labs.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500">
             暂无实验室数据
           </div>
         ) : (
-          filteredLabs.map((lab) => (
+          labs.map((lab) => (
             <div
               key={lab.id}
               className={`border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 ${
@@ -223,18 +248,29 @@ export default function LabPage() {
               <div className="border-t border-gray-300/70 my-6"></div>
 
               <div className="mt-3 flex justify-end">
-                <button
-                  onClick={() => handleEdit(lab)}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors"
-                >
-                  编辑
-                </button>
-                <button
-                  onClick={() => setDeleteConfirm(lab)}
-                  className="ml-2 px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
-                >
-                  删除
-                </button>
+                {isAdmin ? (
+                  <>
+                    <button
+                      onClick={() => handleEdit(lab)}
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(lab)}
+                      className="ml-2 px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                    >
+                      删除
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => handleReserve(lab)}
+                    className="px-3 py-1.5 text-sm border border-blue-200 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
+                  >
+                    预约
+                  </button>
+                )}
               </div>
             </div>
           ))

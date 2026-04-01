@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useMockAuth } from '@/contexts/MockAuthProvider';
+import { useAuth } from '@/contexts/AuthContext';
 import { ROLE_TEXT } from '@/lib/constants';
 
 /**
@@ -35,6 +35,8 @@ const NAV_ITEMS = {
       label: '实验室管理',
       icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
     },
+  ],
+  user: [
     {
       href: '/reservation/my',
       label: '我的预约',
@@ -78,7 +80,7 @@ function getAvatarText(user) {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user, isAdmin, isLabManager, isTagManager, logout } = useMockAuth();
+  const { user, isAdmin, isLabManager, isTagManager, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (href) => {
@@ -157,11 +159,37 @@ export default function Sidebar() {
             ))}
           </nav>
 
-          {/* 管理菜单（管理员/审批者可见） */}
-          {showAdminMenu && (
+          {/* 用户菜单（非管理员可见） */}
+          {!isAdmin && (
             <nav className="space-y-1 mb-6">
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
-                管理
+                预约
+              </p>
+              {NAV_ITEMS.user.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center p-3 rounded-lg transition-colors ${
+                    isActive(item.href)
+                      ? 'bg-blue-50 text-blue-600 font-medium'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                  </svg>
+                  <span className="ml-3 text-sm">{item.label}</span>
+                </Link>
+              ))}
+            </nav>
+          )}
+
+          {/* 管理员菜单（仅超级管理员/管理员可见） */}
+          {isAdmin && (
+            <nav className="space-y-1 mb-6">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
+                管理员
               </p>
               {NAV_ITEMS.admin.map((item) => (
                 <Link
@@ -187,6 +215,29 @@ export default function Sidebar() {
                   )}
                 </Link>
               ))}
+            </nav>
+          )}
+
+          {/* 审批菜单（实验室/标签管理员可见） */}
+          {(isLabManager || isTagManager) && !isAdmin && (
+            <nav className="space-y-1 mb-6">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
+                审批
+              </p>
+              <Link
+                href="/reservation/approve"
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center p-3 rounded-lg transition-colors ${
+                  isActive('/reservation/approve')
+                    ? 'bg-blue-50 text-blue-600 font-medium'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="ml-3 text-sm">审批预约</span>
+              </Link>
             </nav>
           )}
         </div>

@@ -24,6 +24,7 @@ async def get_instruments(
     limit: int = 100,
     status: int | None = None,
     lab_id: int | None = None,
+    keyword: str | None = None,
 ) -> Tuple[List[Instrument], int]:
     """获取仪器列表"""
     query = select(Instrument)
@@ -33,6 +34,9 @@ async def get_instruments(
 
     if lab_id is not None:
         query = query.where(Instrument.lab_id == lab_id)
+
+    if keyword and keyword.strip():
+        query = query.where(Instrument.name.ilike(f"%{keyword}%"))
 
     total_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(total_query)
