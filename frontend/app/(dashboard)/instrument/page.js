@@ -7,7 +7,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { STATUS_TEXT } from '@/lib/constants';
+import { STATUS, STATUS_TEXT } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
