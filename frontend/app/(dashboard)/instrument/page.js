@@ -10,6 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { STATUS_TEXT } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
 import api from '@/lib/api';
+import { useToast } from '@/components/Toast';
 
 const EMPTY_FORM = {
   name: '',
@@ -30,6 +31,7 @@ const STATUS_BADGE_CLASS = {
 };
 
 export default function InstrumentPage() {
+  const toast = useToast();
   const [instruments, setInstruments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -127,7 +129,7 @@ export default function InstrumentPage() {
       fetchInstruments();
       fetchLabs();
     } catch (err) {
-      alert(err.message || '保存失败');
+      toast.error(err.message || '保存失败');
     }
   };
 
@@ -138,7 +140,7 @@ export default function InstrumentPage() {
       setDeleteConfirm(null);
       fetchInstruments();
     } catch (err) {
-      alert(err.message || '删除失败');
+      toast.error(err.message || '删除失败');
     }
   };
 

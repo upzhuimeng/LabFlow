@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
+import { useToast } from '@/components/Toast';
 
 const EMPTY_INSTRUMENT_FORM = {
   name: '',
@@ -32,6 +33,7 @@ const EMPTY_LAB_FORM = {
 };
 
 export default function EntryPage() {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('instrument');
   const [labs, setLabs] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
@@ -65,10 +67,10 @@ export default function EntryPage() {
         price: instrumentForm.price ? parseFloat(instrumentForm.price) : null,
       };
       await api.post('/instruments', submitData);
-      showSuccess('仪器添加成功！');
+      toast.success('仪器添加成功！');
       setInstrumentForm(EMPTY_INSTRUMENT_FORM);
     } catch (err) {
-      alert(err.message || '提交失败');
+      toast.error(err.message || '提交失败');
     }
   };
 
@@ -80,11 +82,11 @@ export default function EntryPage() {
         capacity: labForm.capacity ? parseInt(labForm.capacity) : null,
       };
       await api.post('/labs', submitData);
-      showSuccess('实验室添加成功！');
+      toast.success('实验室添加成功！');
       setLabForm(EMPTY_LAB_FORM);
       fetchLabs();
     } catch (err) {
-      alert(err.message || '提交失败');
+      toast.error(err.message || '提交失败');
     }
   };
 

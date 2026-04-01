@@ -6,20 +6,20 @@
 
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
 export default function LoginPage() {
-    const canvasRef = useRef(null);
-    const { login, loading, error } = useAuth();
+    const router = useRouter();
     const [form, setForm] = useState({
-        username: '',
+        phone: '',
         password: '',
     });
     const [showPassword, setShowPassword] = useState(false);
     const [localError, setLocalError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         setForm({
@@ -32,153 +32,121 @@ export default function LoginPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLocalError('');
+        setLoading(true);
 
         try {
-            const data = await api.post('/auth/login', {
-                username: form.username,
+            const loginData = await api.post('/auth/login', {
+                phone: form.phone,
                 password: form.password,
             });
 
-            if (data.code === 200) {
-                window.location.href = '/dashboard';
+            if (loginData.code === 200) {
+                localStorage.setItem('access_token', loginData.data.access_token);
+                
+                const userData = await api.get('/users/me');
+                if (userData.code === 200) {
+                    localStorage.setItem('user', JSON.stringify(userData.data));
+                }
+                
+                router.push('/dashboard');
             } else {
-                setLocalError(data.message || '登录失败');
+                setLocalError(loginData.message || '登录失败');
             }
         } catch (err) {
-            setLocalError(err.message || '登录失败，请检查用户名和密码');
+            setLocalError(err.message || '登录失败，请检查手机号和密码');
+        } finally {
+            setLoading(false);
         }
     };
 
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const particles = [];
-
-        for (let i = 0; i < 120; i++) {
-            particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                r: Math.random() * 2,
-                dx: (Math.random() - 0.5) * 0.3,
-                dy: (Math.random() - 0.5) * 0.3,
-            });
-        }
-
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = 'rgba(255,255,255,0.5)';
-
-            particles.forEach((p) => {
-                p.x += p.dx;
-                p.y += p.dy;
-
-                if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
-                if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
-
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            requestAnimationFrame(animate);
-        }
-
-        animate();
-    }, []);
-
-    const displayError = localError || error;
-
     return (
-        <div className="relative flex items-center justify-center h-screen w-screen bg-black overflow-hidden">
-            <div className="absolute w-[800px] h-[800px] bg-white opacity-10 blur-[200px] rounded-full"></div>
-
-            <canvas ref={canvasRef} className="absolute inset-0"></canvas>
-
-            <div className="relative z-10 w-[380px] p-10 rounded-2xl
-      bg-white/10 backdrop-blur-xl
-      border border-white/20
-      shadow-[0_0_40px_rgba(255,255,255,0.1)]">
-
-                <h1 className="text-3xl font-bold text-white text-center">
-                    LabFlow
-                </h1>
-
-                <p className="text-gray-400 text-center mb-8">
-                    实验室管理系统
-                </p>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <input
-                        name="username"
-                        placeholder="用户名"
-                        value={form.username}
-                        className="w-full p-3 rounded-lg bg-black/40 border border-gray-600
-            text-white placeholder-gray-400
-            focus:outline-none focus:border-white transition"
-                        onChange={handleChange}
-                    />
-
-                    <div className="relative">
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            name="password"
-                            value={form.password}
-                            placeholder="密码"
-                            className="w-full p-3 rounded-lg bg-black/40 border border-gray-600
-        text-white placeholder-gray-400
-        focus:outline-none focus:border-white transition"
-                            onChange={handleChange}
-                        />
-
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                        >
-                            {showPassword ? (
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+        <div className="bg-gradient-to-br from-slate-100 to-blue-50 min-h-screen flex items-center justify-center p-4">
+            <div className="w-full max-w-md">
+                <div className="bg-white rounded-2xl shadow-xl shadow-blue-100/50 p-8">
+                    <div className="flex items-center justify-center mb-6">
+                        <div className="flex items-center">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-3">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
                                 </svg>
-                            ) : (
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                            )}
-                        </button>
+                            </div>
+                            <span className="text-2xl font-bold text-gray-800 tracking-tight">LabFlow</span>
+                        </div>
                     </div>
 
-                    {displayError && (
-                        <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-200 text-sm">
-                            {displayError}
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">手机号</label>
+                            <input
+                                type="text"
+                                name="phone"
+                                placeholder="请输入手机号"
+                                value={form.phone}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-800 placeholder-gray-400"
+                                onChange={handleChange}
+                            />
                         </div>
-                    )}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">密码</label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    name="password"
+                                    placeholder="请输入密码"
+                                    value={form.password}
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-800 placeholder-gray-400 pr-12"
+                                    onChange={handleChange}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    {showPassword ? (
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-white text-black font-semibold p-3 rounded-lg
-            hover:bg-gray-200 hover:scale-[1.02] active:scale-[0.98]
-            transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {loading ? '登录中...' : '登录'}
-                    </button>
-                </form>
+                        {localError && (
+                            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+                                {localError}
+                            </div>
+                        )}
 
-                <p className="text-center text-sm text-gray-400 mt-6">
-                    没有账号？
-                    <Link
-                        href="/user/register"
-                        className="text-white ml-1 hover:underline"
-                    >
-                        注册
-                    </Link>
-                </p>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 active:bg-blue-800 transition-all text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? '登录中...' : '登录'}
+                        </button>
+                    </form>
+
+                    <div className="mt-6 text-center">
+                        <p className="text-sm text-gray-500">
+                            还没有账号？
+                            <Link href="/user/register" className="text-blue-600 hover:text-blue-700 font-medium ml-1">
+                                立即注册
+                            </Link>
+                        </p>
+                    </div>
+                </div>
+
+                <div className="mt-6 text-center">
+                    <div className="inline-flex items-center space-x-2 text-xs text-gray-400">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        <span>系统运行正常</span>
+                    </div>
+                </div>
             </div>
         </div>
     );

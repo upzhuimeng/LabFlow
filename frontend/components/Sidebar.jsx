@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useMockAuth } from '@/contexts/MockAuthProvider';
+import { useAuth } from '@/contexts/AuthContext';
 import { ROLE_TEXT } from '@/lib/constants';
 
 /**
@@ -78,7 +78,7 @@ function getAvatarText(user) {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user, isAdmin, isLabManager, isTagManager, logout } = useMockAuth();
+  const { user, isAdmin, isLabManager, isTagManager, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (href) => {

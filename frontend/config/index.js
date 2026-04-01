@@ -5,33 +5,35 @@
 // Description: 前端配置文件
 
 const config = {
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
+  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1',
 
   API_ENDPOINTS: {
     AUTH: {
       LOGIN: '/auth/login',
-      REGISTER: '/users',
+      REGISTER: '/auth/register',
       LOGOUT: '/auth/logout',
-      REFRESH: '/auth/refresh',
     },
     INSTRUMENT: {
-      LIST: '/instrument',
-      DETAIL: (id) => `/instrument/${id}`,
+      LIST: '/instruments',
+      DETAIL: (id) => `/instruments/${id}`,
     },
     LAB: {
-      LIST: '/lab',
-      DETAIL: (id) => `/lab/${id}`,
+      LIST: '/labs',
+      DETAIL: (id) => `/labs/${id}`,
     },
     RESERVATION: {
-      LIST: '/reservation',
-      DETAIL: (id) => `/reservation/${id}`,
-      APPROVE: (id) => `/reservation/${id}/approve`,
-      REJECT: (id) => `/reservation/${id}/reject`,
+      LIST: '/reservations',
+      DETAIL: (id) => `/reservations/${id}`,
+      APPROVE: (id) => `/approvals/reservations/${id}/approve`,
+      REJECT: (id) => `/approvals/reservations/${id}/reject`,
     },
     USER: {
       LIST: '/users',
       DETAIL: (id) => `/users/${id}`,
-      ROLE: '/users/role',
+      ME: '/users/me',
+    },
+    APPROVAL: {
+      PENDING: '/approvals/pending',
     },
   },
 

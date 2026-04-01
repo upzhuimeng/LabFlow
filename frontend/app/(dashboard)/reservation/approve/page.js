@@ -10,6 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { STATUS_TEXT } from '@/lib/constants';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import { useToast } from '@/components/Toast';
 
 const STATUS_BADGE_CLASS = {
   0: 'bg-blue-100 text-blue-700',
@@ -19,6 +20,7 @@ const STATUS_BADGE_CLASS = {
 };
 
 export default function ApproveReservationsPage() {
+  const toast = useToast();
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -76,7 +78,7 @@ export default function ApproveReservationsPage() {
   const confirmApprove = async () => {
     if (!selectedItem) return;
     try {
-      await api.post(`/approvals/reservations/${selectedItem.id}/approve`, 
+      await api.post(`/approvals/reservations/${selectedItem.id}/approve`,
         { level: selectedItem.current_level || 1 },
         { params: { level: selectedItem.current_level || 1 } }
       );
@@ -84,7 +86,7 @@ export default function ApproveReservationsPage() {
       setActionType(null);
       fetchPendingApprovals();
     } catch (err) {
-      alert(err.message || '操作失败');
+      toast.error(err.message || '操作失败');
     }
   };
 
@@ -104,8 +106,16 @@ export default function ApproveReservationsPage() {
       setActionType(null);
       fetchPendingApprovals();
     } catch (err) {
-      alert(err.message || '操作失败');
+      toast.error(err.message || '操作失败');
     }
+  };
+
+  const getButtonClass = (status) => {
+    const baseClass = 'flex-1 px-4 py-2 text-white rounded-lg text-sm';
+    if (status === 2) {
+      return `${baseClass} bg-red-600 hover:bg-red-700`;
+    }
+    return `${baseClass} bg-green-600 hover:bg-green-700`;
   };
 
   if (loading) {
@@ -224,11 +234,7 @@ export default function ApproveReservationsPage() {
               </button>
               <button
                 onClick={selectedItem.status === 2 ? confirmReject : confirmApprove}
-                className={`flex-1 px-4 py-2 text-white rounded-lg text-sm ${
-                  selectedItem.status === 2 
-                    ? 'bg-red-600 hover:bg-red-700' 
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
+                className={getButtonClass(selectedItem.status)}
               >
                 确认
               </button>
