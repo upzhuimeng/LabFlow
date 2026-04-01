@@ -43,6 +43,7 @@ export default function LabPage() {
     totalPages: 0,
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingLab, setEditingLab] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -52,13 +53,14 @@ export default function LabPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get('/labs', {
-        params: { 
-          page: pagination.page, 
-          page_size: pagination.pageSize,
-          keyword: searchTerm || undefined,
-        },
-      });
+      const params = { 
+        page: pagination.page, 
+        page_size: pagination.pageSize,
+      };
+      if (activeSearch && activeSearch.trim()) {
+        params.keyword = activeSearch.trim();
+      }
+      const res = await api.get('/labs', { params });
       const data = res.data;
       setLabs(data.items || []);
       setPagination(prev => ({
@@ -71,18 +73,22 @@ export default function LabPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize, searchTerm]);
+  }, [pagination.page, pagination.pageSize, activeSearch]);
+
+  const handleSearch = () => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+    setActiveSearch(searchTerm);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   useEffect(() => {
     fetchLabs();
   }, [fetchLabs]);
-
-  const filteredLabs = searchTerm
-    ? labs.filter(lab =>
-        lab.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lab.address?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : labs;
 
   const handleAdd = () => {
     setEditingLab(null);
@@ -186,19 +192,19 @@ export default function LabPage() {
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setPagination(prev => ({ ...prev, page: 1 }));
           }}
+          onKeyDown={handleKeyDown}
           className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {filteredLabs.length === 0 ? (
+        {labs.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500">
             暂无实验室数据
           </div>
         ) : (
-          filteredLabs.map((lab) => (
+          labs.map((lab) => (
             <div
               key={lab.id}
               className={`border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 ${

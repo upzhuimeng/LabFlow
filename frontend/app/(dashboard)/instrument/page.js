@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { STATUS, STATUS_TEXT } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
@@ -46,6 +46,7 @@ export default function InstrumentPage() {
     totalPages: 0,
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingInstrument, setEditingInstrument] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -56,13 +57,14 @@ export default function InstrumentPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get('/instruments', {
-        params: { 
-          page: pagination.page, 
-          page_size: pagination.pageSize,
-          keyword: searchTerm || undefined,
-        },
-      });
+      const params = { 
+        page: pagination.page, 
+        page_size: pagination.pageSize,
+      };
+      if (activeSearch && activeSearch.trim()) {
+        params.keyword = activeSearch.trim();
+      }
+      const res = await api.get('/instruments', { params });
       const data = res.data;
       setInstruments(data.items || []);
       setPagination(prev => ({
@@ -75,7 +77,7 @@ export default function InstrumentPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize, searchTerm]);
+  }, [pagination.page, pagination.pageSize, activeSearch]);
 
   const fetchLabs = async () => {
     try {
@@ -91,11 +93,16 @@ export default function InstrumentPage() {
     fetchLabs();
   }, [fetchInstruments]);
 
-  const filteredInstruments = searchTerm
-    ? instruments.filter(inst =>
-        inst.name?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : instruments;
+  const handleSearch = () => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+    setActiveSearch(searchTerm);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const handleAdd = () => {
     setEditingInstrument(null);
@@ -203,19 +210,19 @@ export default function InstrumentPage() {
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setPagination(prev => ({ ...prev, page: 1 }));
           }}
+          onKeyDown={handleKeyDown}
           className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {filteredInstruments.length === 0 ? (
+        {instruments.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500">
             暂无设备数据
           </div>
         ) : (
-          filteredInstruments.map((instrument) => (
+          instruments.map((instrument) => (
             <div
               key={instrument.id}
               className={`border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 ${
