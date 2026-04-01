@@ -23,12 +23,40 @@ const STATUS_BADGE_CLASS = {
 
 function ReservationForm({ labId, instrumentId, onSuccess, onCancel }) {
   const toast = useToast();
+  const [labInfo, setLabInfo] = useState(null);
+  const [instrumentInfo, setInstrumentInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     start_time: '',
     end_time: '',
     purpose: '',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchInfo = async () => {
+      setLoading(true);
+      try {
+        if (labId) {
+          const labRes = await api.get(`/labs/${labId}`);
+          setLabInfo(labRes.data);
+        }
+        if (instrumentId) {
+          const instRes = await api.get(`/instruments/${instrumentId}`);
+          setInstrumentInfo(instRes.data);
+          if (instRes.data.lab_id && !labId) {
+            const labRes = await api.get(`/labs/${instRes.data.lab_id}`);
+            setLabInfo(labRes.data);
+          }
+        }
+      } catch (err) {
+        toast.error('获取信息失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInfo();
+  }, [labId, instrumentId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -68,9 +96,41 @@ function ReservationForm({ labId, instrumentId, onSuccess, onCancel }) {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="text-center text-gray-500 py-8">加载中...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <h2 className="text-xl font-semibold text-gray-800 mb-6">填写预约信息</h2>
+      
+      {labInfo && (
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+          <h3 className="font-medium text-blue-800 mb-2">实验室信息</h3>
+          <div className="grid grid-cols-2 gap-2 text-sm text-blue-700">
+            <p><span className="font-medium">名称：</span>{labInfo.name}</p>
+            <p><span className="font-medium">地址：</span>{labInfo.address}</p>
+            <p><span className="font-medium">容量：</span>{labInfo.capacity}人</p>
+            {labInfo.manager && <p><span className="font-medium">负责人：</span>{labInfo.manager}</p>}
+          </div>
+        </div>
+      )}
+
+      {instrumentInfo && (
+        <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-100">
+          <h3 className="font-medium text-green-800 mb-2">仪器信息</h3>
+          <div className="grid grid-cols-2 gap-2 text-sm text-green-700">
+            <p><span className="font-medium">名称：</span>{instrumentInfo.name}</p>
+            <p><span className="font-medium">型号：</span>{instrumentInfo.model || '-'}</p>
+            <p><span className="font-medium">厂商：</span>{instrumentInfo.manufacturer || '-'}</p>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
