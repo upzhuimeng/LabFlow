@@ -11,6 +11,7 @@ import { STATUS, STATUS_TEXT } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const EMPTY_FORM = {
   name: '',
@@ -32,6 +33,7 @@ const STATUS_BADGE_CLASS = {
 
 export default function InstrumentPage() {
   const toast = useToast();
+  const { isAdmin } = useAuth();
   const [instruments, setInstruments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -174,15 +176,17 @@ export default function InstrumentPage() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 gap-3 mb-6">
-        <button
-          onClick={handleAdd}
-          className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          新增设备
-        </button>
+        {isAdmin && (
+          <button
+            onClick={handleAdd}
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            新增设备
+          </button>
+        )}
         <input
           type="text"
           placeholder="搜索设备名称..."

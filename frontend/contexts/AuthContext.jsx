@@ -12,70 +12,62 @@ import { ROLE, PERMISSION } from '@/lib/constants';
 
 const AuthContext = createContext();
 
-const checkPermissions = {
-  isAdmin: (user) => {
-    if (!user) return false;
-    return user.role === ROLE.SUPER_ADMIN || user.role === ROLE.ADMIN;
-  },
-
-  isLabManager: (user) => {
-    if (!user) return false;
-    return user.role === ROLE.SUPER_ADMIN || user.role === ROLE.ADMIN;
-  },
-
-  isTagManager: (user) => {
-    if (!user) return false;
-    return user.role === ROLE.SUPER_ADMIN || user.role === ROLE.ADMIN;
-  },
-
-  hasPermission: (user, permission) => {
-    if (!user) return false;
-    
-    if (checkPermissions.isAdmin(user)) return true;
-
-    switch (permission) {
-      case PERMISSION.CAN_VIEW_INSTRUMENT:
-      case PERMISSION.CAN_VIEW_LAB:
-        return true;
-      case PERMISSION.CAN_CREATE_INSTRUMENT:
-      case PERMISSION.CAN_EDIT_INSTRUMENT:
-      case PERMISSION.CAN_DELETE_INSTRUMENT:
-      case PERMISSION.CAN_CREATE_LAB:
-      case PERMISSION.CAN_EDIT_LAB:
-      case PERMISSION.CAN_DELETE_LAB:
-      case PERMISSION.CAN_MANAGE_USER:
-        return false;
-      case PERMISSION.CAN_CREATE_RESERVATION:
-        return true;
-      case PERMISSION.CAN_APPROVE_RESERVATION:
-        return checkPermissions.isLabManager(user) || checkPermissions.isTagManager(user);
-      default:
-        return false;
-    }
-  },
-};
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [isLabManager, setIsLabManager] = useState(false);
+  const [isTagManager, setIsTagManager] = useState(false);
+
+  const fetchPermissions = useCallback(async () => {
+    try {
+      const res = await fetch(`${config.API_BASE_URL}/users/me/permissions`, {
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (data.code === 200) {
+        setIsLabManager(data.data.is_lab_manager);
+        setIsTagManager(data.data.is_tag_manager);
+        localStorage.setItem('permissions', JSON.stringify({
+          is_lab_manager: data.data.is_lab_manager,
+          is_tag_manager: data.data.is_tag_manager,
+        }));
+      }
+    } catch (err) {
+      console.error('获取权限失败:', err);
+    }
+  }, []);
+
+  const isAdmin = user && (user.role === ROLE.SUPER_ADMIN || user.role === ROLE.ADMIN);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedUser = localStorage.getItem('user');
       const storedToken = localStorage.getItem('access_token');
+      const storedPermissions = localStorage.getItem('permissions');
+      
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
       if (storedToken) {
         setToken(storedToken);
       }
+      if (storedPermissions) {
+        const perms = JSON.parse(storedPermissions);
+        setIsLabManager(perms.is_lab_manager);
+        setIsTagManager(perms.is_tag_manager);
+      }
     }
     setLoading(false);
   }, []);
 
-const logout = useCallback(async (shouldRedirect = true) => {
+  useEffect(() => {
+    if (user) {
+      fetchPermissions();
+    }
+  }, [user, fetchPermissions]);
+
+  const logout = useCallback(async (shouldRedirect = true) => {
     try {
       await fetch(`${config.API_BASE_URL}/auth/logout`, {
         method: 'POST',
@@ -87,9 +79,12 @@ const logout = useCallback(async (shouldRedirect = true) => {
     } finally {
       setUser(null);
       setToken(null);
+      setIsLabManager(false);
+      setIsTagManager(false);
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
+        localStorage.removeItem('permissions');
         if (shouldRedirect) {
           window.location.href = '/user/login';
         }
@@ -114,13 +109,35 @@ const logout = useCallback(async (shouldRedirect = true) => {
         user,
         token,
         loading,
-        error,
         logout,
         isAuthenticated: !!user,
-        isAdmin: checkPermissions.isAdmin(user),
-        isLabManager: checkPermissions.isLabManager(user),
-        isTagManager: checkPermissions.isTagManager(user),
-        hasPermission: (permission) => checkPermissions.hasPermission(user, permission),
+        isAdmin,
+        isLabManager,
+        isTagManager,
+        hasPermission: (permission) => {
+          if (!user) return false;
+          if (isAdmin) return true;
+
+          switch (permission) {
+            case PERMISSION.CAN_VIEW_INSTRUMENT:
+            case PERMISSION.CAN_VIEW_LAB:
+              return true;
+            case PERMISSION.CAN_CREATE_INSTRUMENT:
+            case PERMISSION.CAN_EDIT_INSTRUMENT:
+            case PERMISSION.CAN_DELETE_INSTRUMENT:
+            case PERMISSION.CAN_CREATE_LAB:
+            case PERMISSION.CAN_EDIT_LAB:
+            case PERMISSION.CAN_DELETE_LAB:
+            case PERMISSION.CAN_MANAGE_USER:
+              return false;
+            case PERMISSION.CAN_CREATE_RESERVATION:
+              return true;
+            case PERMISSION.CAN_APPROVE_RESERVATION:
+              return isLabManager || isTagManager;
+            default:
+              return false;
+          }
+        },
       }}
     >
       {children}
