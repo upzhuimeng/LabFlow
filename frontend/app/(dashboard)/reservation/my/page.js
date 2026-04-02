@@ -274,16 +274,6 @@ function MyReservationsContent() {
     );
   };
 
-  const getApprovalLevelText = (currentLevel) => {
-    switch (currentLevel) {
-      case 0: return '未申请';
-      case 1: return '一级审批中';
-      case 2: return '二级审批中';
-      case 3: return '已通过';
-      default: return '未知';
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-80px)]">
@@ -351,10 +341,6 @@ function MyReservationsContent() {
                     <p>
                       <span className="font-medium">用途：</span>
                       {reservation.purpose || '-'}
-                    </p>
-                    <p>
-                      <span className="font-medium">审批进度：</span>
-                      {getApprovalLevelText(reservation.current_level)}
                     </p>
                   </div>
 
