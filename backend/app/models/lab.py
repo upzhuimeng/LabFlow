@@ -32,10 +32,6 @@ class Lab(Base):
         comment="状态(0-正常 1-维护 2-停用)",
     )
 
-    tag_id: Mapped[int] = mapped_column(
-        ForeignKey("tag.id"), nullable=False, index=True, comment="标签编号"
-    )
-
     keyword: Mapped[str | None] = mapped_column(
         String(255), comment="关键词，用于大模型检索"
     )
