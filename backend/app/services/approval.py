@@ -7,10 +7,7 @@ from sqlalchemy import select, func
 from typing import Dict, Any
 
 from app.models.reservation import Reservation
-from app.models.lab import Lab
 from app.models.lab_user import LabUser
-from app.models.user import User
-from app.models.approval import Approval
 from app.crud import approval as approval_crud
 from app.crud import lab as lab_crud
 from app.crud import user as user_crud

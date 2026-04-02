@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
 from app.schemas.base import BaseResponse
-from app.schemas.approval import ApprovalResponse
 from app.crud import approval as approval_crud
 from app.services import approval as approval_service
 from app.crud import user as user_crud

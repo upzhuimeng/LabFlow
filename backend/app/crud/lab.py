@@ -21,7 +21,6 @@ async def get_labs(
     skip: int = 0,
     limit: int = 100,
     status: int | None = None,
-    tag_id: int | None = None,
     keyword: str | None = None,
 ) -> Tuple[List[Lab], int]:
     """获取实验室列表"""
@@ -29,9 +28,6 @@ async def get_labs(
 
     if status is not None:
         query = query.where(Lab.status == status)
-
-    if tag_id is not None:
-        query = query.where(Lab.tag_id == tag_id)
 
     if keyword and keyword.strip():
         query = query.where(Lab.name.ilike(f"%{keyword}%"))

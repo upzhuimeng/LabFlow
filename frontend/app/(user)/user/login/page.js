@@ -59,36 +59,6 @@ export default function LoginPage() {
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLocalError('');
-        setLoading(true);
-
-        try {
-            const loginData = await api.post('/auth/login', {
-                identifier: form.identifier,
-                password: form.password,
-            });
-
-            if (loginData.code === 200) {
-                localStorage.setItem('access_token', loginData.data.access_token);
-                
-                const userData = await api.get('/users/me');
-                if (userData.code === 200) {
-                    localStorage.setItem('user', JSON.stringify(userData.data));
-                }
-                
-                router.push('/dashboard');
-            } else {
-                setLocalError(loginData.message || '登录失败');
-            }
-        } catch (err) {
-            setLocalError(err.message || '登录失败，请检查用户名/手机号/邮箱和密码');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     return (
         <div className="bg-gradient-to-br from-slate-100 to-blue-50 min-h-screen flex items-center justify-center p-4">
             <div className="w-full max-w-md">

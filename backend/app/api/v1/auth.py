@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_db
 from app.schemas.token import LoginRequest
 from app.schemas.base import BaseResponse
-from app.schemas.token import TokenResponse
 from app.services.auth import authenticate_user
 from app.core.security import set_token_cookie, clear_token_cookie
 

@@ -7,7 +7,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.token import TokenResponse
 from app.exceptions.business import AuthError
-from app.core.security import verify_password, create_access_token, hash_password
+from app.core.security import verify_password, create_access_token
 from app.core.config import setting
 from app.crud import user as user_crud
 
