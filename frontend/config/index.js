@@ -10,7 +10,6 @@ const config = {
   API_ENDPOINTS: {
     AUTH: {
       LOGIN: '/auth/login',
-      REGISTER: '/auth/register',
       LOGOUT: '/auth/logout',
     },
     INSTRUMENT: {
@@ -64,6 +63,8 @@ const config = {
       PENDING: 0,
       APPROVED: 1,
       REJECTED: 2,
+      CANCELLED: 3,
+      DRAFT: 4,
     },
   },
 
@@ -87,6 +88,8 @@ const config = {
       0: '审批中',
       1: '通过',
       2: '拒绝',
+      3: '取消',
+      4: '草稿',
     },
   },
 
@@ -94,16 +97,12 @@ const config = {
     SUPER_ADMIN: 0,
     ADMIN: 1,
     LAB_USER: 2,
-    LAB_MANAGER: 3,
-    TAG_MANAGER: 4,
   },
 
   ROLE_TEXT: {
     0: '超级管理员',
     1: '管理员',
     2: '实验员',
-    3: '实验室管理员',
-    4: '标签管理员',
   },
 
   TOKEN_KEY: 'access_token',

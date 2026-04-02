@@ -2,14 +2,13 @@
 # File: approvals.py
 # Description: 审批路由
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
 from app.schemas.base import BaseResponse
-from app.schemas.approval import ApprovalResponse
 from app.crud import approval as approval_crud
 from app.services import approval as approval_service
 from app.crud import user as user_crud
@@ -34,7 +33,6 @@ async def get_pending_approvals(
 @router.post("/reservations/{reservation_id}/approve", response_model=BaseResponse)
 async def approve_reservation(
     reservation_id: int,
-    level: int = Query(..., ge=1, le=2),
     approval_req: ApprovalRequest = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -45,7 +43,6 @@ async def approve_reservation(
             db,
             reservation_id,
             current_user.id,
-            level,
             approval_req.comment if approval_req else None,
         )
         return BaseResponse(message="审批通过", data=result)
@@ -56,7 +53,6 @@ async def approve_reservation(
 @router.post("/reservations/{reservation_id}/reject", response_model=BaseResponse)
 async def reject_reservation(
     reservation_id: int,
-    level: int = Query(..., ge=1, le=2),
     approval_req: ApprovalRequest = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -67,7 +63,6 @@ async def reject_reservation(
             db,
             reservation_id,
             current_user.id,
-            level,
             approval_req.comment if approval_req else None,
         )
         return BaseResponse(message="已拒绝", data=result)
@@ -93,7 +88,6 @@ async def get_reservation_approvals(
                 "reservation_id": a.reservation_id,
                 "approver_id": a.approver_id,
                 "approver_name": approver.name if approver else None,
-                "level": a.level,
                 "status": a.status,
                 "comment": a.comment,
                 "approved_at": a.approved_at,

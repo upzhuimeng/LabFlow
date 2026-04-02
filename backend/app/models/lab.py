@@ -5,7 +5,7 @@
 # Description: Lab ORM
 
 from datetime import datetime
-from sqlalchemy import DateTime, Integer, SmallInteger, String, ForeignKey, Text, func
+from sqlalchemy import DateTime, Integer, SmallInteger, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
@@ -30,10 +30,6 @@ class Lab(Base):
         nullable=False,
         server_default="0",
         comment="状态(0-正常 1-维护 2-停用)",
-    )
-
-    tag_id: Mapped[int] = mapped_column(
-        ForeignKey("tag.id"), nullable=False, index=True, comment="标签编号"
     )
 
     keyword: Mapped[str | None] = mapped_column(

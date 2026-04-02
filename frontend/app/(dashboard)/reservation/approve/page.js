@@ -34,9 +34,8 @@ export default function ApproveReservationsPage() {
     try {
       const res = await api.get('/approvals/pending');
       const data = res.data || {};
-      const level1 = data.level1_pending || [];
-      const level2 = data.level2_pending || [];
-      setReservations([...level1, ...level2]);
+      // API returns flat list directly in data
+      setReservations(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || '获取数据失败');
     } finally {
@@ -63,16 +62,6 @@ export default function ApproveReservationsPage() {
     );
   };
 
-  const getApprovalLevelText = (currentLevel) => {
-    switch (currentLevel) {
-      case 0: return '未申请';
-      case 1: return '一级审批中';
-      case 2: return '二级审批中';
-      case 3: return '已通过';
-      default: return '未知';
-    }
-  };
-
   const handleApprove = (item) => {
     setSelectedItem(item);
     setActionType('approve');
@@ -81,10 +70,7 @@ export default function ApproveReservationsPage() {
   const confirmApprove = async () => {
     if (!selectedItem) return;
     try {
-      await api.post(`/approvals/reservations/${selectedItem.id}/approve`,
-        { level: selectedItem.current_level || 1 },
-        { params: { level: selectedItem.current_level || 1 } }
-      );
+      await api.post(`/approvals/reservations/${selectedItem.id}/approve`);
       setSelectedItem(null);
       setActionType(null);
       fetchPendingApprovals();
@@ -101,10 +87,7 @@ export default function ApproveReservationsPage() {
   const confirmReject = async () => {
     if (!selectedItem) return;
     try {
-      await api.post(`/approvals/reservations/${selectedItem.id}/reject`,
-        { level: selectedItem.current_level || 1 },
-        { params: { level: selectedItem.current_level || 1 } }
-      );
+      await api.post(`/approvals/reservations/${selectedItem.id}/reject`);
       setSelectedItem(null);
       setActionType(null);
       fetchPendingApprovals();
@@ -181,10 +164,6 @@ export default function ApproveReservationsPage() {
                 <p>
                   <span className="font-medium">用途：</span>
                   {reservation.purpose || '-'}
-                </p>
-                <p>
-                  <span className="font-medium">审批进度：</span>
-                  {getApprovalLevelText(reservation.current_level)}
                 </p>
               </div>
 

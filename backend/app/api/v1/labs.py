@@ -39,14 +39,13 @@ async def list_labs(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status: Optional[int] = Query(None, ge=0, le=2),
-    tag_id: Optional[int] = Query(None),
     keyword: Optional[str] = Query(None, max_length=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """获取实验室列表"""
     skip = (page - 1) * page_size
-    labs, total = await lab_crud.get_labs(db, skip, page_size, status, tag_id, keyword)
+    labs, total = await lab_crud.get_labs(db, skip, page_size, status, keyword)
 
     items = [LabResponse.model_validate(lab).model_dump() for lab in labs]
 
