@@ -10,7 +10,6 @@ from typing import Optional
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
 from app.models.lab_user import LabUser
-from app.models.tag_user import TagUser
 from app.schemas.user import UserUpdate, UserResponse
 from app.schemas.base import BaseResponse
 from app.crud import user as user_crud
@@ -30,7 +29,7 @@ async def get_current_user_permissions(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """获取当前用户权限（是否为实验室/标签管理员）"""
+    """获取当前用户权限（是否为实验室管理员）"""
     lab_result = await db.execute(
         select(LabUser).where(
             LabUser.user_id == current_user.id, LabUser.is_active == 0
@@ -38,15 +37,9 @@ async def get_current_user_permissions(
     )
     lab_manager = lab_result.scalars().first() is not None
 
-    tag_result = await db.execute(
-        select(TagUser).where(TagUser.user_id == current_user.id)
-    )
-    tag_manager = tag_result.scalars().first() is not None
-
     return BaseResponse(
         data={
             "is_lab_manager": lab_manager,
-            "is_tag_manager": tag_manager,
         }
     )
 

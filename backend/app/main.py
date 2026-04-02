@@ -13,8 +13,6 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.reservations import router as reservations_router
 from app.api.v1.labs import router as labs_router
 from app.api.v1.lab_users import router as lab_users_router
-from app.api.v1.tags import router as tags_router
-from app.api.v1.tag_users import router as tag_users_router
 from app.api.v1.instruments import router as instruments_router
 from app.api.v1.users import router as users_router
 from app.api.v1.approvals import router as approvals_router
@@ -35,8 +33,6 @@ register_exception_handlers(app)
 app.include_router(auth_router, prefix="/api/v1/auth")
 app.include_router(labs_router)
 app.include_router(lab_users_router)
-app.include_router(tags_router)
-app.include_router(tag_users_router)
 app.include_router(instruments_router)
 app.include_router(users_router)
 app.include_router(approvals_router)

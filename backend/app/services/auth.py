@@ -5,38 +5,34 @@
 # Description: 认证服务
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.user import UserCreate
 from app.schemas.token import TokenResponse
-from app.exceptions.business import AuthError, AlreadyExistsError
+from app.exceptions.business import AuthError
 from app.core.security import verify_password, create_access_token, hash_password
+from app.core.config import setting
 from app.crud import user as user_crud
 
 
 async def authenticate_user(
-    db: AsyncSession, phone: str | None, email: str | None, password: str
+    db: AsyncSession, identifier: str, password: str
 ) -> TokenResponse:
-    if phone:
-        user = await user_crud.get_user_by_phone(db, phone)
-    elif email:
-        user = await user_crud.get_user_by_email(db, email)
-    else:
-        raise AuthError("请提供手机号或邮箱")
+    if (
+        identifier == setting.super_admin.USERNAME
+        and password == setting.super_admin.PASSWORD
+    ):
+        token = create_access_token(-1, extra={"role": 0})
+        return TokenResponse(access_token=token)
+
+    user = await user_crud.get_user_by_phone(db, identifier)
+    if not user:
+        user = await user_crud.get_user_by_email(db, identifier)
+    if not user:
+        user = await user_crud.get_user_by_name(db, identifier)
 
     if not user:
-        raise AuthError("手机号/邮箱或密码错误")
+        raise AuthError("用户不存在或密码错误")
 
     if not verify_password(password, user.password_hash):
-        raise AuthError("手机号/邮箱或密码错误")
+        raise AuthError("用户不存在或密码错误")
 
-    token = create_access_token(user.id)
-    return TokenResponse(access_token=token)
-
-
-async def register_user(db: AsyncSession, user_in: UserCreate) -> TokenResponse:
-    existing = await user_crud.get_user_by_phone(db, user_in.phone)
-    if existing:
-        raise AlreadyExistsError("该手机号已注册")
-
-    user = await user_crud.create_user(db, user_in)
     token = create_access_token(user.id)
     return TokenResponse(access_token=token)

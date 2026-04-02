@@ -29,6 +29,11 @@ async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
     return result.scalar_one_or_none()
 
 
+async def get_user_by_name(db: AsyncSession, name: str) -> User | None:
+    result = await db.execute(select(User).where(User.name == name))
+    return result.scalar_one_or_none()
+
+
 async def get_users(
     db: AsyncSession,
     skip: int = 0,

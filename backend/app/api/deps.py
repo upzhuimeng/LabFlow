@@ -19,9 +19,16 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+class SuperAdminUser:
+    id: int = -1
+    name: str = "SuperAdmin"
+    role: int = 0
+    is_active: int = 0
+
+
 async def get_current_user(
     request: Request, db: AsyncSession = Depends(get_db)
-) -> User:
+) -> User | SuperAdminUser:
     token = request.cookies.get("access_token")
     if not token:
         raise AuthError("未登录")
@@ -29,6 +36,9 @@ async def get_current_user(
     user_id = decode_token(token)
     if not user_id:
         raise AuthError("无效的令牌")
+
+    if user_id == -1:
+        return SuperAdminUser()
 
     user = await user_crud.get_user_by_id(db, user_id)
     if not user:
