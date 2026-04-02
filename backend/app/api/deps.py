@@ -5,6 +5,7 @@
 # Description: 依赖注入
 
 from typing import AsyncGenerator
+from datetime import datetime
 from fastapi import Request, Depends
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from app.db.session import Session_Local
@@ -24,6 +25,11 @@ class SuperAdminUser:
     name: str = "SuperAdmin"
     role: int = 0
     is_active: int = 0
+    phone: str = "N/A"
+    email: str | None = None
+    avatar_url: str | None = None
+    last_login_at: datetime | None = None
+    created_at: datetime = datetime.now()
 
 
 async def get_current_user(

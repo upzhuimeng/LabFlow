@@ -25,12 +25,9 @@ export const STATUS = {
     APPROVED: 1,
     REJECTED: 2,
     CANCELLED: 3,
+    DRAFT: 4,
   },
   LAB_USER: {
-    ACTIVE: 0,
-    INACTIVE: 1,
-  },
-  TAG_USER: {
     ACTIVE: 0,
     INACTIVE: 1,
   },
@@ -57,6 +54,7 @@ export const STATUS_TEXT = {
     [STATUS.RESERVATION.APPROVED]: '已通过',
     [STATUS.RESERVATION.REJECTED]: '已拒绝',
     [STATUS.RESERVATION.CANCELLED]: '已取消',
+    [STATUS.RESERVATION.DRAFT]: '草稿',
   },
 };
 
@@ -81,6 +79,7 @@ export const STATUS_COLOR = {
     [STATUS.RESERVATION.APPROVED]: 'green',
     [STATUS.RESERVATION.REJECTED]: 'red',
     [STATUS.RESERVATION.CANCELLED]: 'gray',
+    [STATUS.RESERVATION.DRAFT]: 'gray',
   },
 };
 
@@ -116,12 +115,6 @@ export const ACTION = {
   DELETE: 'delete',
 };
 
-export const APPROVAL_LEVEL = {
-  LEVEL_1: 1,
-  LEVEL_2: 2,
-  ALL_PASSED: 3,
-};
-
 export const PAGE_SIZE = {
   DEFAULT: 10,
   INSTRUMENT: 10,
@@ -138,6 +131,5 @@ export default {
   ROLE_TEXT,
   PERMISSION,
   ACTION,
-  APPROVAL_LEVEL,
   PAGE_SIZE,
 };

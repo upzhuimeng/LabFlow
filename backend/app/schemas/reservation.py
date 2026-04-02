@@ -3,7 +3,6 @@
 # Description: 预约相关的数据模型
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-from typing import Optional
 from datetime import datetime
 
 

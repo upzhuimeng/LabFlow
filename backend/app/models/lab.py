@@ -5,7 +5,7 @@
 # Description: Lab ORM
 
 from datetime import datetime
-from sqlalchemy import DateTime, Integer, SmallInteger, String, ForeignKey, Text, func
+from sqlalchemy import DateTime, Integer, SmallInteger, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 

@@ -4,7 +4,7 @@
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional, Tuple, List
+from typing import Tuple, List
 from datetime import datetime
 
 from app.models.reservation import Reservation
