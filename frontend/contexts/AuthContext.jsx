@@ -17,7 +17,6 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLabManager, setIsLabManager] = useState(false);
-  const [isTagManager, setIsTagManager] = useState(false);
 
   const fetchPermissions = useCallback(async () => {
     try {
@@ -27,10 +26,8 @@ export function AuthProvider({ children }) {
       const data = await res.json();
       if (data.code === 200) {
         setIsLabManager(data.data.is_lab_manager);
-        setIsTagManager(data.data.is_tag_manager);
         localStorage.setItem('permissions', JSON.stringify({
           is_lab_manager: data.data.is_lab_manager,
-          is_tag_manager: data.data.is_tag_manager,
         }));
       }
     } catch (err) {
@@ -55,7 +52,6 @@ export function AuthProvider({ children }) {
       if (storedPermissions) {
         const perms = JSON.parse(storedPermissions);
         setIsLabManager(perms.is_lab_manager);
-        setIsTagManager(perms.is_tag_manager);
       }
     }
     setLoading(false);
@@ -80,7 +76,6 @@ export function AuthProvider({ children }) {
       setUser(null);
       setToken(null);
       setIsLabManager(false);
-      setIsTagManager(false);
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
@@ -113,7 +108,6 @@ export function AuthProvider({ children }) {
         isAuthenticated: !!user,
         isAdmin,
         isLabManager,
-        isTagManager,
         hasPermission: (permission) => {
           if (!user) return false;
           if (isAdmin) return true;
@@ -133,7 +127,7 @@ export function AuthProvider({ children }) {
             case PERMISSION.CAN_CREATE_RESERVATION:
               return true;
             case PERMISSION.CAN_APPROVE_RESERVATION:
-              return isLabManager || isTagManager;
+              return isLabManager;
             default:
               return false;
           }
