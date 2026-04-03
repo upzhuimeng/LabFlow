@@ -178,6 +178,7 @@ export default function LabPage() {
       setDeleteReservations([]);
       fetchLabs();
       toast.success('实验室删除成功');
+      window.dispatchEvent(new Event('notification:refresh'));
     } catch (err) {
       toast.error(err.message || '删除失败');
       setDeleteConfirm(null);

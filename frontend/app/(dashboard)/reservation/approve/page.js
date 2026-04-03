@@ -73,6 +73,7 @@ export default function ApproveReservationsPage() {
       setActionType(null);
       setComment('');
       fetchPendingApprovals();
+      window.dispatchEvent(new Event('notification:refresh'));
     } catch (err) {
       toast.error(err.message || '操作失败');
     }
@@ -91,6 +92,7 @@ export default function ApproveReservationsPage() {
       setActionType(null);
       setComment('');
       fetchPendingApprovals();
+      window.dispatchEvent(new Event('notification:refresh'));
     } catch (err) {
       toast.error(err.message || '操作失败');
     }
