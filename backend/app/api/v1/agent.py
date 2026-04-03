@@ -233,6 +233,47 @@ async def summarize_statistics(
         result = await agent.run(prompt, deps=deps)
         summary = result.output
 
+        report_type_text = "周报" if request.report_type == "weekly" else "月报"
+        period_info = f"{request.report_data.get('start_date', '')} 至 {request.report_data.get('end_date', '')}"
+
+        attachment_data = {
+            "summary": summary,
+            "report_type": request.report_type,
+            "period": period_info,
+            "stats": request.report_data.get("current_period", {}),
+        }
+
+        await notification_crud.create_notification(
+            db,
+            user_id=current_user.id,
+            title=f"AI 数据总结（{report_type_text}）",
+            content=f"{period_info} {report_type_text}数据 AI 总结已完成，点击查看详情",
+            notif_type=3,
+            attachment=json.dumps(attachment_data, ensure_ascii=False),
+        )
+
+        return BaseResponse(
+            data={
+                "summary": summary,
+                "report_type": request.report_type,
+            }
+        )
+    except Exception as e:
+        return BaseResponse(
+            code=500,
+            data={
+                "summary": f"生成总结失败: {str(e)}",
+                "report_type": request.report_type,
+            },
+        )
+
+    report_json = json.dumps(request.report_data, ensure_ascii=False)
+    prompt = f"请分析以下{request.report_type}数据并生成总结：\n\n{report_json}"
+
+    try:
+        result = await agent.run(prompt, deps=deps)
+        summary = result.output
+
         return BaseResponse(
             data={
                 "summary": summary,

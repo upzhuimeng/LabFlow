@@ -21,7 +21,7 @@ class Notification(Base):
         SmallInteger,
         nullable=False,
         default=3,
-        comment="类型：1-审批结果，2-预约失效，3-系统通知，4-智能推荐",
+        comment="类型：1-审批结果，2-预约失效，3-系统通知，4-智能推荐，5-AI总结",
     )
     related_id: Mapped[int | None] = mapped_column(
         Integer, nullable=True, comment="关联ID"

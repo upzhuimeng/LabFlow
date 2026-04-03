@@ -17,6 +17,7 @@ const NOTIFICATION_TYPE_CLASS = {
   2: 'bg-yellow-100 text-yellow-700',
   3: 'bg-gray-100 text-gray-700',
   4: 'bg-purple-100 text-purple-700',
+  5: 'bg-indigo-100 text-indigo-700',
 };
 
 const TYPE_TEXT = {
@@ -24,6 +25,7 @@ const TYPE_TEXT = {
   2: '预约失效',
   3: '系统通知',
   4: '智能推荐',
+  5: 'AI总结',
 };
 
 const RESERVATION_STATUS_TEXT = {
@@ -341,6 +343,35 @@ export default function NotificationDetailPage() {
                 return null;
               }
               return <ApprovalResultCard data={attachmentData} />;
+            })()
+          ) : notification.type === 5 && notification.attachment ? (
+            (() => {
+              let attachmentData;
+              try {
+                attachmentData = typeof notification.attachment === 'string' 
+                  ? JSON.parse(notification.attachment) 
+                  : notification.attachment;
+              } catch {
+                return null;
+              }
+              return (
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span className="text-sm font-medium text-indigo-700">
+                      {attachmentData.report_type === 'weekly' ? '周报' : '月报'} AI 总结
+                    </span>
+                  </div>
+                  <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                    {attachmentData.summary}
+                  </p>
+                  <div className="mt-3 pt-3 border-t border-indigo-200 text-xs text-gray-500">
+                    统计周期：{attachmentData.period}
+                  </div>
+                </div>
+              );
             })()
           ) : reservation ? (
             <div className="bg-white rounded-lg border border-gray-200 p-4">
