@@ -10,7 +10,8 @@ from datetime import datetime
 
 from app.api.deps import get_db, get_current_user
 from app.agent.schemas.deps import ReservationAssistantDeps
-from app.core.agents import get_reservation_agent, get_statistics_agent
+from app.core.agents.reservation_agent import get_reservation_agent
+from app.core.agents.statistics_agent import get_statistics_agent
 from app.models.user import User
 from app.schemas.base import BaseResponse
 from app.crud import agent_log as agent_log_crud
