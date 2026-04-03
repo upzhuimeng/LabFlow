@@ -12,13 +12,14 @@ import { STATUS, STATUS_TEXT } from '@/lib/constants';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { SearchableSelect } from '@/components/ui';
 
 const EMPTY_FORM = {
   name: '',
   address: '',
   capacity: '',
   status: 0,
-  manager: '',
+  manager_user_id: '',
   phone: '',
   description: '',
 };
@@ -26,7 +27,8 @@ const EMPTY_FORM = {
 const STATUS_BADGE_CLASS = {
   0: 'bg-green-100 text-green-700',
   1: 'bg-yellow-100 text-yellow-700',
-  2: 'bg-gray-100 text-gray-700',
+  2: 'bg-orange-100 text-orange-700',
+  3: 'bg-red-100 text-red-700',
 };
 
 export default function LabPage() {
@@ -34,6 +36,7 @@ export default function LabPage() {
   const toast = useToast();
   const { isAdmin } = useAuth();
   const [labs, setLabs] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
@@ -48,6 +51,9 @@ export default function LabPage() {
   const [editingLab, setEditingLab] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [showMaintenanceAndDisabled, setShowMaintenanceAndDisabled] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
 
   const fetchLabs = useCallback(async () => {
     setLoading(true);
@@ -61,19 +67,37 @@ export default function LabPage() {
         params.keyword = activeSearch.trim();
       }
       const res = await api.get('/labs', { params });
-      const data = res.data;
-      setLabs(data.items || []);
+      let data = res.data?.items || [];
+      
+      if (showDeleted) {
+        data = data.filter(lab => lab.status === 3);
+      } else if (showMaintenanceAndDisabled) {
+        data = data.filter(lab => lab.status !== 3);
+      } else {
+        data = data.filter(lab => lab.status === 0);
+      }
+      
+      setLabs(data);
       setPagination(prev => ({
         ...prev,
-        total: data.pagination?.total || 0,
-        totalPages: data.pagination?.total_pages || 0,
+        total: data.length,
+        totalPages: 1,
       }));
     } catch (err) {
       setError(err.message || '获取数据失败');
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize, activeSearch]);
+  }, [pagination.page, pagination.pageSize, activeSearch, showMaintenanceAndDisabled, showDeleted, isAdmin]);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await api.get('/users', { params: { page: 1, page_size: 100 } });
+      setUsers(res.data?.items || []);
+    } catch (err) {
+      console.error('获取用户失败:', err);
+    }
+  }, []);
 
   const handleSearch = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
@@ -88,7 +112,8 @@ export default function LabPage() {
 
   useEffect(() => {
     fetchLabs();
-  }, [fetchLabs]);
+    fetchUsers();
+  }, [fetchLabs, fetchUsers]);
 
   const handleAdd = () => {
     setEditingLab(null);
@@ -103,7 +128,7 @@ export default function LabPage() {
       address: lab.address || '',
       capacity: lab.capacity || '',
       status: lab.status ?? 0,
-      manager: lab.manager || '',
+      manager_user_id: lab.manager_user_id || '',
       phone: lab.phone || '',
       description: lab.description || '',
     });
@@ -117,9 +142,11 @@ export default function LabPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const { manager_user_id, ...rest } = formData;
       const submitData = {
-        ...formData,
+        ...rest,
         capacity: formData.capacity ? parseInt(formData.capacity) : null,
+        manager_user_id: manager_user_id ? parseInt(manager_user_id) : null,
       };
 
       if (editingLab) {
@@ -175,7 +202,7 @@ export default function LabPage() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 gap-3 mb-6">
-        {isAdmin && (
+        {/* {isAdmin && (
           <button
             onClick={handleAdd}
             className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center"
@@ -185,7 +212,7 @@ export default function LabPage() {
             </svg>
             新增实验室
           </button>
-        )}
+        )} */}
         <input
           type="text"
           placeholder="搜索实验室名称或地址..."
@@ -196,6 +223,42 @@ export default function LabPage() {
           onKeyDown={handleKeyDown}
           className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
         />
+        <button
+          onClick={handleSearch}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+        >
+          搜索
+        </button>
+        <label className={`flex items-center space-x-2 text-sm text-gray-600 ${showDeleted ? 'opacity-50' : ''}`}>
+          <input
+            type="checkbox"
+            checked={showMaintenanceAndDisabled}
+            disabled={showDeleted}
+            onChange={(e) => {
+              setShowMaintenanceAndDisabled(e.target.checked);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-300"
+          />
+          <span>显示维护和停用</span>
+        </label>
+        {isAdmin && (
+          <label className="flex items-center space-x-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={showDeleted}
+              onChange={(e) => {
+                setShowDeleted(e.target.checked);
+                if (e.target.checked) {
+                  setShowMaintenanceAndDisabled(false);
+                }
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-300"
+            />
+            <span>只看已删除</span>
+          </label>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4">
@@ -207,9 +270,7 @@ export default function LabPage() {
           labs.map((lab) => (
             <div
               key={lab.id}
-              className={`border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 ${
-                lab.status === STATUS.LAB.DISABLED ? 'opacity-75' : ''
-              }`}
+              className="border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300"
             >
               <div className="flex justify-between items-start mb-2">
                 <h2 className="text-lg font-semibold text-blue-600">{lab.name}</h2>
@@ -231,7 +292,7 @@ export default function LabPage() {
                 </p>
                 <p>
                   <span className="font-medium">负责人：</span>
-                  {lab.manager || '未填写'}
+                  {lab.manager_name || '未填写'}
                 </p>
                 <p>
                   <span className="font-medium">联系电话：</span>
@@ -247,8 +308,8 @@ export default function LabPage() {
 
               <div className="border-t border-gray-300/70 my-6"></div>
 
-              <div className="mt-3 flex justify-end">
-                {isAdmin ? (
+              <div className="mt-3 flex justify-end gap-2">
+                {isAdmin && lab.status !== 3 ? (
                   <>
                     <button
                       onClick={() => handleEdit(lab)}
@@ -258,18 +319,24 @@ export default function LabPage() {
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(lab)}
-                      className="ml-2 px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+                      className="px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
                     >
                       删除
                     </button>
                   </>
-                ) : (
+                ) : lab.status === 3 ? (
+                  <span className="text-sm text-gray-400">已删除</span>
+                ) : null}
+                {lab.status === 0 && !isAdmin && (
                   <button
                     onClick={() => handleReserve(lab)}
                     className="px-3 py-1.5 text-sm border border-blue-200 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
                   >
                     预约
                   </button>
+                )}
+                {lab.status !== 0 && !isAdmin && (
+                  <span className="text-sm text-gray-400">不可预约</span>
                 )}
               </div>
             </div>
@@ -378,13 +445,20 @@ export default function LabPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">负责人</label>
-                  <input
-                    type="text"
-                    value={formData.manager}
-                    onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
-                    placeholder="请输入负责人姓名"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
+                  <SearchableSelect
+                    label="负责人"
+                    name="manager_user_id"
+                    value={formData.manager_user_id || ''}
+                    onChange={(e) => {
+                      const { name, value } = e.target;
+                      setFormData(prev => ({ ...prev, [name]: value ? parseInt(value) : '' }));
+                    }}
+                    options={users.filter(u => u.role === 1 || u.role === 2).map(user => ({
+                      value: user.id,
+                      label: `${user.name} (${user.role === 1 ? '管理员' : '实验员'})`
+                    }))}
+                    placeholder="请选择负责人"
+                    searchPlaceholder="搜索用户..."
                   />
                 </div>
                 <div>

@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { SearchableSelect } from '@/components/ui';
 
 const EMPTY_INSTRUMENT_FORM = {
   name: '',
@@ -27,8 +28,7 @@ const EMPTY_LAB_FORM = {
   address: '',
   capacity: '',
   status: 0,
-  manager: '',
-  phone: '',
+  manager_user_id: '',
   description: '',
 };
 
@@ -36,9 +36,11 @@ export default function EntryPage() {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('instrument');
   const [labs, setLabs] = useState([]);
+  const [users, setUsers] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
   const [instrumentForm, setInstrumentForm] = useState(EMPTY_INSTRUMENT_FORM);
   const [labForm, setLabForm] = useState(EMPTY_LAB_FORM);
+  const [labFormErrors, setLabFormErrors] = useState({});
 
   const fetchLabs = useCallback(async () => {
     try {
@@ -49,9 +51,19 @@ export default function EntryPage() {
     }
   }, []);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await api.get('/users', { params: { page: 1, page_size: 100 } });
+      setUsers(res.data?.items || []);
+    } catch (err) {
+      console.error('获取用户失败:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchLabs();
-  }, [fetchLabs]);
+    fetchUsers();
+  }, [fetchLabs, fetchUsers]);
 
   const showSuccess = (message) => {
     setSuccessMessage(message);
@@ -76,10 +88,21 @@ export default function EntryPage() {
 
   const handleLabSubmit = async (e) => {
     e.preventDefault();
+    const errors = {};
+    if (!labForm.manager_user_id) {
+      errors.manager_user_id = '请选择负责人';
+    }
+    if (Object.keys(errors).length > 0) {
+      setLabFormErrors(errors);
+      return;
+    }
+    setLabFormErrors({});
     try {
+      const { manager_user_id, ...rest } = labForm;
       const submitData = {
-        ...labForm,
+        ...rest,
         capacity: labForm.capacity ? parseInt(labForm.capacity) : null,
+        manager_user_id: manager_user_id ? parseInt(manager_user_id) : null,
       };
       await api.post('/labs', submitData);
       toast.success('实验室添加成功！');
@@ -97,7 +120,14 @@ export default function EntryPage() {
 
   const handleLabChange = (e) => {
     const { name, value } = e.target;
-    setLabForm(prev => ({ ...prev, [name]: value }));
+    if (name === 'manager_user_id') {
+      setLabForm(prev => ({ ...prev, [name]: value ? parseInt(value) : '' }));
+      if (value) {
+        setLabFormErrors(prev => ({ ...prev, manager_user_id: undefined }));
+      }
+    } else {
+      setLabForm(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const tabs = [
@@ -218,20 +248,15 @@ export default function EntryPage() {
                     <option value={2}>停用</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">实验室</label>
-                  <select
-                    name="lab_id"
-                    value={instrumentForm.lab_id}
-                    onChange={handleInstrumentChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
-                  >
-                    <option value="">请选择</option>
-                    {labs.map(lab => (
-                      <option key={lab.id} value={lab.id}>{lab.name}</option>
-                    ))}
-                  </select>
-                </div>
+                <SearchableSelect
+                  label="实验室"
+                  name="lab_id"
+                  value={instrumentForm.lab_id || ''}
+                  onChange={handleInstrumentChange}
+                  options={labs.map(lab => ({ value: lab.id, label: lab.name }))}
+                  placeholder="请选择实验室"
+                  searchPlaceholder="搜索实验室..."
+                />
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">备注</label>
                   <textarea
@@ -321,23 +346,19 @@ export default function EntryPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">负责人</label>
-                  <input
-                    type="text"
-                    name="manager"
-                    value={labForm.manager}
+                  <SearchableSelect
+                    label="负责人"
+                    name="manager_user_id"
+                    value={labForm.manager_user_id || ''}
                     onChange={handleLabChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">联系电话</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={labForm.phone}
-                    onChange={handleLabChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
+                    options={users.filter(u => u.role === 1 || u.role === 2).map(user => ({
+                      value: user.id,
+                      label: `${user.name} (${user.role === 1 ? '管理员' : '实验员'})`
+                    }))}
+                    placeholder="请选择负责人"
+                    searchPlaceholder="搜索用户..."
+                    required
+                    error={labFormErrors.manager_user_id}
                   />
                 </div>
                 <div className="md:col-span-2">
