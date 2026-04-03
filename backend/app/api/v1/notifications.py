@@ -54,6 +54,33 @@ async def get_unread_count(
     return BaseResponse(data={"count": count})
 
 
+@router.put("/read-all", response_model=BaseResponse)
+async def mark_all_notifications_read(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """标记全部通知为已读"""
+    count = await notification_crud.mark_all_as_read(db, current_user.id)
+    return BaseResponse(message=f"已标记 {count} 条通知为已读")
+
+
+@router.get("/{notification_id}", response_model=BaseResponse)
+async def get_notification_detail(
+    notification_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """获取通知详情"""
+    notification = await notification_crud.get_notification_by_id(
+        db, notification_id, current_user.id
+    )
+    if not notification:
+        return BaseResponse(code=404, message="通知不存在")
+    return BaseResponse(
+        data=NotificationResponse.model_validate(notification).model_dump()
+    )
+
+
 @router.put("/{notification_id}/read", response_model=BaseResponse)
 async def mark_notification_read(
     notification_id: int,
@@ -67,11 +94,16 @@ async def mark_notification_read(
     return BaseResponse(message="已标记为已读")
 
 
-@router.put("/read-all", response_model=BaseResponse)
-async def mark_all_notifications_read(
+@router.delete("/{notification_id}", response_model=BaseResponse)
+async def delete_notification(
+    notification_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """标记全部通知为已读"""
-    count = await notification_crud.mark_all_as_read(db, current_user.id)
-    return BaseResponse(message=f"已标记 {count} 条通知为已读")
+    """删除通知（软删除）"""
+    success = await notification_crud.delete_notification(
+        db, notification_id, current_user.id
+    )
+    if not success:
+        return BaseResponse(code=404, message="通知不存在")
+    return BaseResponse(message="通知已删除")

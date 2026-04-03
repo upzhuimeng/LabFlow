@@ -6,9 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+from datetime import datetime, timezone
 
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
+from app.models.reservation import Reservation
 from app.schemas.instrument import (
     InstrumentCreate,
     InstrumentUpdate,
@@ -17,6 +19,7 @@ from app.schemas.instrument import (
 from app.schemas.base import BaseResponse
 from app.crud import instrument as instrument_crud
 from app.crud import lab as lab_crud
+from app.crud import notification as notification_crud
 from app.models.lab import Lab
 
 
@@ -120,7 +123,42 @@ async def update_instrument(
         if not lab:
             raise HTTPException(status_code=400, detail="实验室不存在")
 
+    old_status = instrument.status
     updated = await instrument_crud.update_instrument(db, instrument, instrument_data)
+
+    new_status = (
+        instrument_data.status if instrument_data.status is not None else old_status
+    )
+
+    if new_status == 1 and old_status != 1:
+        now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+        result = await db.execute(
+            select(Reservation.user_id)
+            .where(
+                Reservation.lab_id == instrument.lab_id,
+                Reservation.is_deleted == 0,
+                Reservation.status.in_([0, 1]),
+                Reservation.start_time >= now_utc,
+            )
+            .distinct()
+        )
+        user_ids = [r[0] for r in result.fetchall()]
+
+        lab_result = await db.execute(
+            select(Lab.name).where(Lab.id == instrument.lab_id)
+        )
+        lab_name = lab_result.scalar_one_or_none() or "未知实验室"
+
+        for user_id in user_ids:
+            await notification_crud.create_notification(
+                db,
+                user_id=user_id,
+                title="仪器维护通知",
+                content=f"您预约的实验室「{lab_name}」中的仪器「{instrument.name}」正在进行维护，可能影响您的预约使用。",
+                notif_type=3,
+                related_id=instrument_id,
+            )
+
     return BaseResponse(
         message="仪器更新成功",
         data=InstrumentResponse.model_validate(updated).model_dump(),

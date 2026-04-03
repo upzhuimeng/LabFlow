@@ -6,6 +6,7 @@ from app.models.lab_user import LabUser
 from app.models.reservation import Reservation
 from app.models.approval import Approval
 from app.models.notification import Notification
+from app.models.agent_log import AgentLog
 from app.models.user_log import UserLog
 from app.models.instrument_log import InstrumentLog
 from app.models.lab_user_log import LabUserLog
@@ -19,6 +20,7 @@ __all__ = [
     "Reservation",
     "Approval",
     "Notification",
+    "AgentLog",
     "UserLog",
     "InstrumentLog",
     "LabUserLog",
