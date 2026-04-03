@@ -101,6 +101,14 @@ export default function InstrumentDetailPage() {
         </div>
         <div className="border-t border-gray-300/50 my-6"></div>
         <div className="flex gap-3 mt-6 justify-end">
+          {!isAdmin && instrument.status === 0 && (
+            <Link
+              href={`/reservation/my?instrument_id=${instrument.id}&lab_id=${instrument.lab_id}`}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              预约
+            </Link>
+          )}
           {isAdmin && instrument.status !== 3 && (
             <button
               onClick={() => {
