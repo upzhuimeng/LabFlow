@@ -18,7 +18,7 @@ from app.agent.tools import (
 from app.core.validators import Validator
 
 
-class ReservationAgentSetting:
+class AgentSetting:
     def __init__(self):
         self.AGENT_MODEL_NAME: str = Validator.str_validator(
             "AGENT_MODEL_NAME", os.getenv("AGENT_MODEL_NAME", "MiniMax-M2.7")
@@ -41,8 +41,8 @@ class ReservationAgentSetting:
 
 
 @lru_cache
-def get_reservation_agent_setting() -> ReservationAgentSetting:
-    return ReservationAgentSetting()
+def get_reservation_agent_setting() -> AgentSetting:
+    return AgentSetting()
 
 
 _reservation_agent: Agent[ReservationAssistantDeps, str] | None = None
