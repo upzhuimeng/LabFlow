@@ -61,7 +61,10 @@ async def approve_reservation(
 ) -> Dict[str, Any]:
     """审批通过预约"""
     reservation = await db.execute(
-        select(Reservation).where(Reservation.id == reservation_id)
+        select(Reservation).where(
+            Reservation.id == reservation_id,
+            Reservation.is_deleted == 0,
+        )
     )
     reservation = reservation.scalar_one_or_none()
 
@@ -115,7 +118,10 @@ async def reject_reservation(
 ) -> Dict[str, Any]:
     """审批拒绝预约"""
     reservation = await db.execute(
-        select(Reservation).where(Reservation.id == reservation_id)
+        select(Reservation).where(
+            Reservation.id == reservation_id,
+            Reservation.is_deleted == 0,
+        )
     )
     reservation = reservation.scalar_one_or_none()
 
@@ -179,6 +185,7 @@ async def get_pending_approvals(
     reservations_result = await db.execute(
         select(Reservation).where(
             Reservation.status == 0,
+            Reservation.is_deleted == 0,
             Reservation.lab_id.in_(managed_lab_ids),
         )
     )
@@ -225,6 +232,7 @@ async def get_all_approvals(db: AsyncSession, approver_id: int) -> list[Dict[str
 
     reservations_result = await db.execute(
         select(Reservation).where(
+            Reservation.is_deleted == 0,
             Reservation.lab_id.in_(managed_lab_ids),
         )
     )
