@@ -3,7 +3,7 @@
 # Description: 智能助手 API 路由
 
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -204,16 +204,53 @@ async def abandon_conversation(
     return BaseResponse(message="对话已标记为放弃")
 
 
+async def send_summary_notification_task(
+    user_id: int,
+    report_data: dict,
+    report_type: str,
+    summary: str,
+):
+    """后台任务：发送通知"""
+    from app.db.session import Session_Local
+
+    async with Session_Local() as db:
+        try:
+            report_type_text = "周报" if report_type == "weekly" else "月报"
+            period_info = f"{report_data.get('start_date', '')} 至 {report_data.get('end_date', '')}"
+
+            attachment_data = {
+                "summary": summary,
+                "report_type": report_type,
+                "period": period_info,
+                "stats": report_data.get("current_period", {}),
+                "lab_stats": report_data.get("lab_stats", []),
+                "user_stats": report_data.get("user_stats", []),
+                "changes": report_data.get("changes", {}),
+            }
+
+            await notification_crud.create_notification(
+                db,
+                user_id=user_id,
+                title=f"AI 数据总结（{report_type_text}）",
+                content=f"{period_info} {report_type_text}数据 AI 总结已完成，点击查看详情",
+                notif_type=5,
+                attachment=json.dumps(attachment_data, ensure_ascii=False),
+            )
+        except Exception:
+            pass
+
+
 @router.post("/statistics/summarize", response_model=BaseResponse)
 async def summarize_statistics(
     request: StatisticsAssistantRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
     AI 统计总结助手
 
-    根据报表数据生成自然语言总结
+    根据报表数据生成自然语言总结，立即返回结果并异步发送通知
     """
     if current_user.role not in [0, 1]:
         return BaseResponse(code=403, message="权限不足，仅管理员可使用")
@@ -233,55 +270,19 @@ async def summarize_statistics(
         result = await agent.run(prompt, deps=deps)
         summary = result.output
 
-        report_type_text = "周报" if request.report_type == "weekly" else "月报"
-        period_info = f"{request.report_data.get('start_date', '')} 至 {request.report_data.get('end_date', '')}"
-
-        attachment_data = {
-            "summary": summary,
-            "report_type": request.report_type,
-            "period": period_info,
-            "stats": request.report_data.get("current_period", {}),
-            "lab_stats": request.report_data.get("lab_stats", []),
-            "user_stats": request.report_data.get("user_stats", []),
-            "changes": request.report_data.get("changes", {}),
-        }
-
-        await notification_crud.create_notification(
-            db,
-            user_id=current_user.id,
-            title=f"AI 数据总结（{report_type_text}）",
-            content=f"{period_info} {report_type_text}数据 AI 总结已完成，点击查看详情",
-            notif_type=5,
-            attachment=json.dumps(attachment_data, ensure_ascii=False),
+        background_tasks.add_task(
+            send_summary_notification_task,
+            current_user.id,
+            request.report_data,
+            request.report_type,
+            summary,
         )
 
         return BaseResponse(
             data={
                 "summary": summary,
-                "report_type": request.report_type,
-            }
-        )
-    except Exception as e:
-        return BaseResponse(
-            code=500,
-            data={
-                "summary": f"生成总结失败: {str(e)}",
                 "report_type": request.report_type,
             },
-        )
-
-    report_json = json.dumps(request.report_data, ensure_ascii=False)
-    prompt = f"请分析以下{request.report_type}数据并生成总结：\n\n{report_json}"
-
-    try:
-        result = await agent.run(prompt, deps=deps)
-        summary = result.output
-
-        return BaseResponse(
-            data={
-                "summary": summary,
-                "report_type": request.report_type,
-            }
         )
     except Exception as e:
         return BaseResponse(
