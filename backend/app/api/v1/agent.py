@@ -4,7 +4,7 @@
 
 import json
 import re
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -14,13 +14,25 @@ from app.agent.schemas.deps import ReservationAssistantDeps
 from app.core.agents import get_reservation_agent
 from app.models.user import User
 from app.schemas.base import BaseResponse
+from app.crud import agent_log as agent_log_crud
+from app.utils.context_storage import save_context, load_context
 
 
 router = APIRouter(prefix="/api/v1/agent", tags=["智能助手"])
 
+RATE_LIMIT_MINUTES = 10
+RATE_LIMIT_MAX_REQUESTS = 3
+
 
 class ReservationAssistantRequest(BaseModel):
     message: str = Field(..., description="用户的需求描述")
+    notification_id: int | None = Field(
+        None, description="关联的通知ID（可选，用于标记卡片过期）"
+    )
+
+
+class CompleteConversationRequest(BaseModel):
+    log_id: int = Field(..., description="日志ID")
 
 
 def parse_agent_response(text: str) -> dict:
@@ -52,7 +64,30 @@ async def assist_reservation(
 
     用户描述需求，返回推荐的实验室和时间段
     """
+    count, _ = await agent_log_crud.get_recent_incomplete_count(
+        db, current_user.id, RATE_LIMIT_MINUTES, RATE_LIMIT_MAX_REQUESTS
+    )
+    if count >= RATE_LIMIT_MAX_REQUESTS:
+        raise HTTPException(
+            status_code=429,
+            detail=f"请求过于频繁，请在 {RATE_LIMIT_MINUTES} 分钟后再试",
+        )
+
     agent = get_reservation_agent()
+
+    active_log = await agent_log_crud.get_active_log(db, current_user.id)
+    if active_log:
+        context_data = load_context(active_log.context_file)
+    else:
+        context_data = {"messages": []}
+
+    context_data.setdefault("messages", []).append(
+        {
+            "role": "user",
+            "content": request.message,
+            "timestamp": datetime.now().isoformat(),
+        }
+    )
 
     deps = ReservationAssistantDeps(
         user_id=current_user.id,
@@ -68,6 +103,30 @@ async def assist_reservation(
 
         text_output = result.output
         parsed = parse_agent_response(text_output)
+
+        context_data["messages"].append(
+            {
+                "role": "assistant",
+                "content": text_output,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+
+        context_file = save_context(current_user.id, context_data)
+
+        if active_log:
+            await agent_log_crud.update_context_file(
+                db, active_log.id, current_user.id, context_file
+            )
+            log_id = active_log.id
+        else:
+            log = await agent_log_crud.create_agent_log(
+                db,
+                user_id=current_user.id,
+                input_message=request.message[:200],
+                context_file=context_file,
+            )
+            log_id = log.id
 
         if parsed.get("lab_id"):
             suggestion = {
@@ -85,8 +144,7 @@ async def assist_reservation(
                     "suggestion": suggestion,
                     "message": "已为您找到合适的实验室，请确认后提交预约",
                     "available_slots": [],
-                    "raw_response": text_output,
-                    "debug_parsed": parsed,
+                    "log_id": log_id,
                 }
             )
         else:
@@ -96,7 +154,7 @@ async def assist_reservation(
                     "suggestion": None,
                     "message": text_output if text_output else "未找到合适的实验室",
                     "available_slots": [],
-                    "debug_parsed": parsed,
+                    "log_id": log_id,
                 }
             )
     except Exception as e:
@@ -108,3 +166,33 @@ async def assist_reservation(
                 "available_slots": [],
             }
         )
+
+
+@router.post("/complete", response_model=BaseResponse)
+async def complete_conversation(
+    request: CompleteConversationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """标记对话为已完成"""
+    success = await agent_log_crud.mark_as_completed(
+        db, request.log_id, current_user.id
+    )
+    if not success:
+        return BaseResponse(code=404, message="对话不存在")
+    return BaseResponse(message="对话已标记为完成")
+
+
+@router.post("/abandon", response_model=BaseResponse)
+async def abandon_conversation(
+    request: CompleteConversationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """标记对话为已放弃"""
+    success = await agent_log_crud.mark_as_abandoned(
+        db, request.log_id, current_user.id
+    )
+    if not success:
+        return BaseResponse(code=404, message="对话不存在")
+    return BaseResponse(message="对话已标记为放弃")

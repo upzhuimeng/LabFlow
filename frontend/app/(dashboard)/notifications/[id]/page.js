@@ -8,7 +8,7 @@ import { useParams } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { NOTIFICATION_TYPE_TEXT } from '@/lib/constants';
+import { NOTIFICATION_TYPE_TEXT, STATUS_TEXT } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
 
@@ -18,12 +18,21 @@ const NOTIFICATION_TYPE_CLASS = {
   3: 'bg-gray-100 text-gray-700',
 };
 
+const STATUS_BADGE_CLASS = {
+  0: 'bg-blue-100 text-blue-700',
+  1: 'bg-green-100 text-green-700',
+  2: 'bg-red-100 text-red-700',
+  3: 'bg-gray-100 text-gray-700',
+  4: 'bg-yellow-100 text-yellow-700',
+};
+
 export default function NotificationDetailPage() {
   const { id } = useParams();
   const toast = useToast();
   const toastRef = useRef(toast);
   toastRef.current = toast;
   const [notification, setNotification] = useState(null);
+  const [reservation, setReservation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [marking, setMarking] = useState(false);
@@ -37,6 +46,9 @@ export default function NotificationDetailPage() {
         const res = await api.get(`/notifications/${id}`);
         if (!cancelled) {
           setNotification(res.data);
+          if (res.data.type === 1 && res.data.related_id) {
+            fetchReservation(res.data.related_id);
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -47,6 +59,16 @@ export default function NotificationDetailPage() {
         if (!cancelled) {
           setLoading(false);
         }
+      }
+    };
+    const fetchReservation = async (reservationId) => {
+      try {
+        const res = await api.get(`/reservations/${reservationId}`);
+        if (!cancelled) {
+          setReservation(res.data);
+        }
+      } catch (err) {
+        // ignore
       }
     };
     fetchDetail();
@@ -151,9 +173,31 @@ export default function NotificationDetailPage() {
 
         <div className="border-t border-gray-100 p-6 bg-gray-50/50">
           <h3 className="text-sm font-medium text-gray-700 mb-3">附件</h3>
-          <div className="min-h-[100px] border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-sm">
-            暂无附件
-          </div>
+          {reservation ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h4 className="font-medium text-gray-800">{reservation.lab_name}</h4>
+                  <p className="text-sm text-gray-500">
+                    {formatDateTime(reservation.start_time)} - {formatDateTime(reservation.end_time)}
+                  </p>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  STATUS_BADGE_CLASS[reservation.status] || STATUS_BADGE_CLASS[0]
+                }`}>
+                  {STATUS_TEXT.RESERVATION[reservation.status] || '未知'}
+                </span>
+              </div>
+              <div className="text-sm text-gray-600">
+                <span className="font-medium">使用目的：</span>
+                {reservation.purpose || '未填写'}
+              </div>
+            </div>
+          ) : (
+            <div className="min-h-[100px] border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+              暂无附件
+            </div>
+          )}
         </div>
       </div>
     </div>
