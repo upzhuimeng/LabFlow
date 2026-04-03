@@ -26,11 +26,15 @@ async def create_lab(
     if current_user.role not in [0, 1]:
         raise HTTPException(status_code=403, detail="权限不足")
 
-    lab = await lab_crud.create_lab(db, lab_data)
+    lab = await lab_crud.create_lab(db, lab_data, lab_data.manager_user_id)
+    manager_id, manager_name = await lab_crud.get_lab_manager(db, lab.id)
+    response_data = LabResponse.model_validate(lab).model_dump()
+    response_data["manager_user_id"] = manager_id
+    response_data["manager_name"] = manager_name
     return BaseResponse(
         code=201,
         message="实验室创建成功",
-        data=LabResponse.model_validate(lab).model_dump(),
+        data=response_data,
     )
 
 
@@ -47,7 +51,13 @@ async def list_labs(
     skip = (page - 1) * page_size
     labs, total = await lab_crud.get_labs(db, skip, page_size, status, keyword)
 
-    items = [LabResponse.model_validate(lab).model_dump() for lab in labs]
+    items = []
+    for lab in labs:
+        item = LabResponse.model_validate(lab).model_dump()
+        manager_id, manager_name = await lab_crud.get_lab_manager(db, lab.id)
+        item["manager_user_id"] = manager_id
+        item["manager_name"] = manager_name
+        items.append(item)
 
     return BaseResponse(
         data={
@@ -73,7 +83,11 @@ async def get_lab(
     if not lab:
         raise HTTPException(status_code=404, detail="实验室不存在")
 
-    return BaseResponse(data=LabResponse.model_validate(lab).model_dump())
+    manager_id, manager_name = await lab_crud.get_lab_manager(db, lab_id)
+    response_data = LabResponse.model_validate(lab).model_dump()
+    response_data["manager_user_id"] = manager_id
+    response_data["manager_name"] = manager_name
+    return BaseResponse(data=response_data)
 
 
 @router.put("/{lab_id}", response_model=BaseResponse)
@@ -92,9 +106,11 @@ async def update_lab(
         raise HTTPException(status_code=404, detail="实验室不存在")
 
     updated = await lab_crud.update_lab(db, lab, lab_data)
-    return BaseResponse(
-        message="实验室更新成功", data=LabResponse.model_validate(updated).model_dump()
-    )
+    manager_id, manager_name = await lab_crud.get_lab_manager(db, lab_id)
+    response_data = LabResponse.model_validate(updated).model_dump()
+    response_data["manager_user_id"] = manager_id
+    response_data["manager_name"] = manager_name
+    return BaseResponse(message="实验室更新成功", data=response_data)
 
 
 @router.delete("/{lab_id}", response_model=BaseResponse)

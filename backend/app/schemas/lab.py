@@ -12,6 +12,7 @@ class LabCreate(BaseModel):
     capacity: int | None = Field(None, ge=1, description="容纳人数")
     keyword: str | None = Field(None, max_length=255, description="关键词")
     description: str | None = Field(None, description="实验室说明")
+    manager_user_id: int = Field(..., description="负责人用户ID")
 
 
 class LabUpdate(BaseModel):
@@ -25,6 +26,7 @@ class LabUpdate(BaseModel):
     )
     keyword: str | None = Field(None, max_length=255, description="关键词")
     description: str | None = Field(None, description="实验室说明")
+    manager_user_id: int | None = Field(None, description="负责人用户ID")
 
 
 class LabResponse(BaseModel):
@@ -35,6 +37,8 @@ class LabResponse(BaseModel):
     status: int
     keyword: str | None
     description: str | None
+    manager_user_id: int | None = None
+    manager_name: str | None = None
     created_at: datetime
     updated_at: datetime | None
 

@@ -10,7 +10,7 @@ from typing import Optional
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
 from app.models.lab_user import LabUser
-from app.schemas.user import UserUpdate, UserResponse
+from app.schemas.user import UserUpdate, UserResponse, UserCreate
 from app.schemas.base import BaseResponse
 from app.crud import user as user_crud
 
@@ -75,6 +75,26 @@ async def list_users(
                 "total_pages": (total + page_size - 1) // page_size,
             },
         }
+    )
+
+
+@router.post("/", response_model=BaseResponse, status_code=201)
+async def create_user(
+    user_data: UserCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """创建用户（管理员）"""
+    if current_user.role not in [0, 1]:
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    existing = await user_crud.get_user_by_phone(db, user_data.phone)
+    if existing:
+        raise HTTPException(status_code=400, detail="该手机号已注册")
+
+    user = await user_crud.create_user(db, user_data)
+    return BaseResponse(
+        message="用户创建成功", data=UserResponse.model_validate(user).model_dump()
     )
 
 
