@@ -65,6 +65,7 @@ export default function NotificationsPage() {
       await api.put(`/notifications/${notificationId}/read`);
       fetchNotifications();
       toast.success('已标记为已读');
+      window.dispatchEvent(new Event('notification:refresh'));
     } catch (err) {
       toast.error(err.message || '操作失败');
     }
@@ -75,6 +76,7 @@ export default function NotificationsPage() {
       await api.put('/notifications/read-all');
       fetchNotifications();
       toast.success('已全部标记为已读');
+      window.dispatchEvent(new Event('notification:refresh'));
     } catch (err) {
       toast.error(err.message || '操作失败');
     }
