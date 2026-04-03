@@ -13,6 +13,7 @@ class NotificationResponse(BaseModel):
     content: str
     type: int
     related_id: int | None
+    attachment: str | None
     is_read: int
     created_at: datetime
 

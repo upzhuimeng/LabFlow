@@ -25,9 +25,9 @@ export default function ReservationAssistant({ onSuggestionAccepted }) {
       const res = await api.post('/agent/reservation/assist', { message });
       const data = res.data;
 
-      if (data?.success && data?.suggestion) {
-        setResult(data);
-        setShowResult(true);
+      if (data?.success) {
+        toast.success(data?.message || '推荐结果已发送到您的消息通知');
+        setMessage('');
       } else {
         toast.info(data?.message || '未找到合适的实验室');
       }

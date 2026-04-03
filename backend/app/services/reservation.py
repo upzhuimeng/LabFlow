@@ -10,6 +10,7 @@ from app.crud import reservation as reservation_crud
 from app.crud import lab as lab_crud
 from app.crud import user as user_crud
 from app.crud import approval as approval_crud
+from app.crud import notification as notification_crud
 from app.schemas.reservation import (
     ReservationCreate,
     ReservationUpdate,
@@ -21,16 +22,13 @@ async def create_reservation(
     db: AsyncSession, reservation_data: ReservationCreate, user_id: int
 ) -> Dict[str, Any]:
     """创建预约"""
-    # 1. 检查实验室是否存在
     lab = await lab_crud.get_lab_by_id(db, reservation_data.lab_id)
     if not lab:
         raise ValueError("实验室不存在")
 
-    # 2. 检查实验室状态
     if lab.status != 0:
         raise ValueError("实验室当前不可预约")
 
-    # 3. 检查时间合法性
     if reservation_data.start_time >= reservation_data.end_time:
         raise ValueError("开始时间必须早于结束时间")
 
@@ -38,7 +36,6 @@ async def create_reservation(
     if reservation_data.start_time < now_utc:
         raise ValueError("不能预约过去的时间")
 
-    # 4. 检查时间冲突
     conflicts = await reservation_crud.check_time_conflict(
         db,
         reservation_data.lab_id,
@@ -52,10 +49,23 @@ async def create_reservation(
         )
         raise ValueError(f"该时间段已被预约：{conflict_times}")
 
-    # 5. 创建预约
     reservation = await reservation_crud.create_reservation(
         db, reservation_data, user_id
     )
+
+    user = await user_crud.get_user_by_id(db, user_id)
+    user_name = user.name if user else "未知用户"
+
+    manager_id, manager_name, _ = await lab_crud.get_lab_manager(db, lab.id)
+    if manager_id and manager_id != user_id:
+        await notification_crud.create_notification(
+            db,
+            user_id=manager_id,
+            title="有新预约待审批",
+            content=f"用户 {user_name} 提交了新的预约申请：「{lab.name}」，时间：{reservation.start_time.strftime('%Y-%m-%d %H:%M')} 至 {reservation.end_time.strftime('%H:%M')}，用途：{reservation.purpose}",
+            notif_type=3,
+            related_id=reservation.id,
+        )
 
     return {
         "id": reservation.id,
@@ -292,5 +302,21 @@ async def cancel_reservation(
     # 状态检查：只有审批中或已通过的才能取消
     if reservation.status not in [0, 1]:
         raise ValueError("当前状态无法取消")
+
+    # 通知实验室负责人
+    lab = await lab_crud.get_lab_by_id(db, reservation.lab_id)
+    lab_name = lab.name if lab else "未知实验室"
+    canceller_name = current_user.name if current_user else "未知用户"
+
+    manager_id, manager_name, _ = await lab_crud.get_lab_manager(db, reservation.lab_id)
+    if manager_id and manager_id != current_user_id:
+        await notification_crud.create_notification(
+            db,
+            user_id=manager_id,
+            title="预约已取消",
+            content=f"用户 {canceller_name} 取消了预约「{lab_name}」，原定时间：{reservation.start_time.strftime('%Y-%m-%d %H:%M')} 至 {reservation.end_time.strftime('%H:%M')}",
+            notif_type=3,
+            related_id=reservation_id,
+        )
 
     await reservation_crud.cancel_reservation(db, reservation)

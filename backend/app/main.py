@@ -18,6 +18,7 @@ from app.api.v1.users import router as users_router
 from app.api.v1.approvals import router as approvals_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.agent import router as agent_router
+from app.api.v1.statistics import router as statistics_router
 
 
 app = FastAPI(title="LabFlow", version="0.1.0")
@@ -41,6 +42,7 @@ app.include_router(approvals_router)
 app.include_router(notifications_router)
 app.include_router(reservations_router)
 app.include_router(agent_router)
+app.include_router(statistics_router)
 
 
 if __name__ == "__main__":

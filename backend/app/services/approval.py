@@ -5,6 +5,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import Dict, Any
+import json
 
 from app.models.reservation import Reservation
 from app.models.lab_user import LabUser
@@ -61,7 +62,10 @@ async def approve_reservation(
 ) -> Dict[str, Any]:
     """审批通过预约"""
     reservation = await db.execute(
-        select(Reservation).where(Reservation.id == reservation_id)
+        select(Reservation).where(
+            Reservation.id == reservation_id,
+            Reservation.is_deleted == 0,
+        )
     )
     reservation = reservation.scalar_one_or_none()
 
@@ -91,6 +95,24 @@ async def approve_reservation(
 
     await db.commit()
 
+    lab = await lab_crud.get_lab_by_id(db, reservation.lab_id)
+    lab_name = lab.name if lab else "未知实验室"
+
+    approver = await user_crud.get_user_by_id(db, approver_id)
+    approver_name = approver.name if approver else "未知审批人"
+
+    attachment_data = {
+        "lab_id": reservation.lab_id,
+        "lab_name": lab_name,
+        "start_time": reservation.start_time.strftime("%Y-%m-%d %H:%M"),
+        "end_time": reservation.end_time.strftime("%Y-%m-%d %H:%M"),
+        "purpose": reservation.purpose,
+        "status": 1,
+        "approval_result": "approved",
+        "approver_name": approver_name,
+        "comment": comment,
+    }
+
     await notification_crud.create_notification(
         db,
         user_id=reservation.user_id,
@@ -98,6 +120,7 @@ async def approve_reservation(
         content=f"您的预约（{reservation.start_time.strftime('%Y-%m-%d %H:%M')} 至 {reservation.end_time.strftime('%H:%M')}）已通过审批",
         notif_type=1,
         related_id=reservation_id,
+        attachment=json.dumps(attachment_data),
     )
 
     return {
@@ -115,7 +138,10 @@ async def reject_reservation(
 ) -> Dict[str, Any]:
     """审批拒绝预约"""
     reservation = await db.execute(
-        select(Reservation).where(Reservation.id == reservation_id)
+        select(Reservation).where(
+            Reservation.id == reservation_id,
+            Reservation.is_deleted == 0,
+        )
     )
     reservation = reservation.scalar_one_or_none()
 
@@ -145,14 +171,32 @@ async def reject_reservation(
 
     await db.commit()
 
-    reject_reason = comment or "无"
+    lab = await lab_crud.get_lab_by_id(db, reservation.lab_id)
+    lab_name = lab.name if lab else "未知实验室"
+
+    approver = await user_crud.get_user_by_id(db, approver_id)
+    approver_name = approver.name if approver else "未知审批人"
+
+    attachment_data = {
+        "lab_id": reservation.lab_id,
+        "lab_name": lab_name,
+        "start_time": reservation.start_time.strftime("%Y-%m-%d %H:%M"),
+        "end_time": reservation.end_time.strftime("%Y-%m-%d %H:%M"),
+        "purpose": reservation.purpose,
+        "status": 2,
+        "approval_result": "rejected",
+        "approver_name": approver_name,
+        "comment": comment,
+    }
+
     await notification_crud.create_notification(
         db,
         user_id=reservation.user_id,
         title="预约审批被拒绝",
-        content=f"您的预约（{reservation.start_time.strftime('%Y-%m-%d %H:%M')} 至 {reservation.end_time.strftime('%H:%M')}）已被拒绝。原因：{reject_reason}",
+        content=f"您的预约（{reservation.start_time.strftime('%Y-%m-%d %H:%M')} 至 {reservation.end_time.strftime('%H:%M')}）已被拒绝。原因：{comment or '无'}",
         notif_type=1,
         related_id=reservation_id,
+        attachment=json.dumps(attachment_data),
     )
 
     return {
@@ -179,6 +223,7 @@ async def get_pending_approvals(
     reservations_result = await db.execute(
         select(Reservation).where(
             Reservation.status == 0,
+            Reservation.is_deleted == 0,
             Reservation.lab_id.in_(managed_lab_ids),
         )
     )
@@ -225,6 +270,7 @@ async def get_all_approvals(db: AsyncSession, approver_id: int) -> list[Dict[str
 
     reservations_result = await db.execute(
         select(Reservation).where(
+            Reservation.is_deleted == 0,
             Reservation.lab_id.in_(managed_lab_ids),
         )
     )

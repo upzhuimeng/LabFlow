@@ -16,6 +16,7 @@ async def create_notification(
     content: str,
     notif_type: int = 3,
     related_id: int | None = None,
+    attachment: str | None = None,
 ) -> Notification:
     """创建通知"""
     notification = Notification(
@@ -24,6 +25,7 @@ async def create_notification(
         content=content,
         type=notif_type,
         related_id=related_id,
+        attachment=attachment,
     )
     db.add(notification)
     await db.commit()
@@ -37,8 +39,11 @@ async def get_notifications_by_user(
     skip: int = 0,
     limit: int = 20,
 ) -> Tuple[List[Notification], int]:
-    """获取用户通知列表"""
-    query = select(Notification).where(Notification.user_id == user_id)
+    """获取用户通知列表（排除已删除的）"""
+    query = select(Notification).where(
+        Notification.user_id == user_id,
+        Notification.is_read != 2,
+    )
 
     total_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(total_query)
@@ -52,7 +57,7 @@ async def get_notifications_by_user(
 
 
 async def get_unread_count(db: AsyncSession, user_id: int) -> int:
-    """获取未读通知数量"""
+    """获取未读通知数量（排除已删除的）"""
     query = (
         select(func.count())
         .select_from(Notification)
@@ -60,6 +65,21 @@ async def get_unread_count(db: AsyncSession, user_id: int) -> int:
     )
     result = await db.execute(query)
     return result.scalar_one()
+
+
+async def get_notification_by_id(
+    db: AsyncSession,
+    notification_id: int,
+    user_id: int,
+) -> Notification | None:
+    """获取单条通知详情（排除已删除的）"""
+    query = select(Notification).where(
+        Notification.id == notification_id,
+        Notification.user_id == user_id,
+        Notification.is_read != 2,
+    )
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
 
 
 async def mark_as_read(db: AsyncSession, notification_id: int, user_id: int) -> bool:
@@ -94,3 +114,23 @@ async def mark_all_as_read(db: AsyncSession, user_id: int) -> int:
     if count > 0:
         await db.commit()
     return count
+
+
+async def delete_notification(
+    db: AsyncSession, notification_id: int, user_id: int
+) -> bool:
+    """软删除通知（is_read=2）"""
+    query = select(Notification).where(
+        Notification.id == notification_id,
+        Notification.user_id == user_id,
+        Notification.is_read != 2,
+    )
+    result = await db.execute(query)
+    notification = result.scalar_one_or_none()
+
+    if not notification:
+        return False
+
+    notification.is_read = 2
+    await db.commit()
+    return True

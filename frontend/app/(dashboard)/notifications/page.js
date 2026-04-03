@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { NOTIFICATION_TYPE_TEXT } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils';
@@ -15,9 +16,12 @@ const NOTIFICATION_TYPE_CLASS = {
   1: 'bg-blue-100 text-blue-700',
   2: 'bg-yellow-100 text-yellow-700',
   3: 'bg-gray-100 text-gray-700',
+  4: 'bg-purple-100 text-purple-700',
+  5: 'bg-indigo-100 text-indigo-700',
 };
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const toast = useToast();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +72,17 @@ export default function NotificationsPage() {
       window.dispatchEvent(new Event('notification:refresh'));
     } catch (err) {
       toast.error(err.message || '操作失败');
+    }
+  };
+
+  const handleDelete = async (notificationId) => {
+    try {
+      await api.delete(`/notifications/${notificationId}`);
+      fetchNotifications();
+      toast.success('通知已删除');
+      window.dispatchEvent(new Event('notification:refresh'));
+    } catch (err) {
+      toast.error(err.message || '删除失败');
     }
   };
 
@@ -135,9 +150,10 @@ export default function NotificationsPage() {
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-4 hover:bg-gray-50 transition-colors ${
+                className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
                   notification.is_read === 0 ? 'bg-blue-50/30' : ''
                 }`}
+                onClick={() => router.push(`/notifications/${notification.id}`)}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-1 min-w-0">
@@ -154,17 +170,31 @@ export default function NotificationsPage() {
                     <h3 className="text-base font-medium text-gray-800 mb-1">
                       {notification.title}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 line-clamp-2">
                       {notification.content}
                     </p>
-                    {notification.is_read === 0 && (
+                    <div className="flex gap-3 mt-2">
+                      {notification.is_read === 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAsRead(notification.id);
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800"
+                        >
+                          标为已读
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleMarkAsRead(notification.id)}
-                        className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(notification.id);
+                        }}
+                        className="text-xs text-gray-400 hover:text-red-600"
                       >
-                        标为已读
+                        删除
                       </button>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
