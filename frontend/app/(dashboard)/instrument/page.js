@@ -31,6 +31,7 @@ const STATUS_BADGE_CLASS = {
   0: 'bg-green-100 text-green-700',
   1: 'bg-yellow-100 text-yellow-700',
   2: 'bg-gray-100 text-gray-700',
+  3: 'bg-red-100 text-red-700',
 };
 
 export default function InstrumentPage() {
@@ -52,6 +53,9 @@ export default function InstrumentPage() {
   const [editingInstrument, setEditingInstrument] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [showMaintenanceAndDisabled, setShowMaintenanceAndDisabled] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [labs, setLabs] = useState([]);
 
   const fetchInstruments = useCallback(async () => {
@@ -66,33 +70,42 @@ export default function InstrumentPage() {
         params.keyword = activeSearch.trim();
       }
       const res = await api.get('/instruments', { params });
-      const data = res.data;
-      setInstruments(data.items || []);
+      let data = res.data?.items || [];
+      
+      if (showDeleted) {
+        data = data.filter(instrument => instrument.status === 3);
+      } else if (showMaintenanceAndDisabled) {
+        data = data.filter(instrument => instrument.status !== 3);
+      } else {
+        data = data.filter(instrument => instrument.status === 0);
+      }
+      
+      setInstruments(data);
       setPagination(prev => ({
         ...prev,
-        total: data.pagination?.total || 0,
-        totalPages: data.pagination?.total_pages || 0,
+        total: data.length,
+        totalPages: 1,
       }));
     } catch (err) {
       setError(err.message || '获取数据失败');
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize, activeSearch]);
+  }, [pagination.page, pagination.pageSize, activeSearch, showMaintenanceAndDisabled, showDeleted]);
 
-  const fetchLabs = async () => {
+  const fetchLabs = useCallback(async () => {
     try {
       const res = await api.get('/labs', { params: { page: 1, page_size: 100 } });
       setLabs(res.data?.items || []);
     } catch (err) {
       console.error('获取实验室失败:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchInstruments();
     fetchLabs();
-  }, [fetchInstruments]);
+  }, [fetchInstruments, fetchLabs]);
 
   const handleSearch = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
@@ -215,6 +228,42 @@ export default function InstrumentPage() {
           onKeyDown={handleKeyDown}
           className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
         />
+        <button
+          onClick={handleSearch}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+        >
+          搜索
+        </button>
+        <label className={`flex items-center space-x-2 text-sm text-gray-600 ${showDeleted ? 'opacity-50' : ''}`}>
+          <input
+            type="checkbox"
+            checked={showMaintenanceAndDisabled}
+            disabled={showDeleted}
+            onChange={(e) => {
+              setShowMaintenanceAndDisabled(e.target.checked);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-300"
+          />
+          <span>显示维修和停用</span>
+        </label>
+        {isAdmin && (
+          <label className="flex items-center space-x-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={showDeleted}
+              onChange={(e) => {
+                setShowDeleted(e.target.checked);
+                if (e.target.checked) {
+                  setShowMaintenanceAndDisabled(false);
+                }
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-300"
+            />
+            <span>只看已删除</span>
+          </label>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4">
@@ -267,7 +316,7 @@ export default function InstrumentPage() {
               <div className="border-t border-gray-300/70 my-6"></div>
 
               <div className="mt-3 flex justify-end">
-                {isAdmin ? (
+                {isAdmin && instrument.status !== 3 ? (
                   <>
                     <button
                       onClick={() => handleEdit(instrument)}
@@ -282,6 +331,8 @@ export default function InstrumentPage() {
                       删除
                     </button>
                   </>
+                ) : instrument.status === 3 ? (
+                  <span className="text-sm text-gray-400">已删除</span>
                 ) : (
                   <button
                     onClick={() => handleReserve(instrument)}
