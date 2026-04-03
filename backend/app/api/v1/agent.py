@@ -167,10 +167,17 @@ async def assist_reservation(
                 }
             )
     except Exception as e:
+        await notification_crud.create_notification(
+            db,
+            user_id=current_user.id,
+            title="智能推荐结果",
+            content=f"处理失败: {str(e)}",
+            notif_type=NOTIF_TYPE_AGENT_RESULT,
+        )
         return BaseResponse(
             data={
                 "success": False,
-                "message": f"处理失败: {str(e)}",
+                "message": f"处理失败: {str(e)}，结果已发送到您的消息通知",
             }
         )
 
