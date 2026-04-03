@@ -48,10 +48,9 @@ async def create_approval(
         reservation_id=reservation_id,
         approver_id=approver_id,
         status=status,
-        comment=comment,
+        comment=comment or "",
         approved_at=datetime.now(),
     )
     db.add(approval)
-    await db.commit()
-    await db.refresh(approval)
+    await db.flush()
     return approval

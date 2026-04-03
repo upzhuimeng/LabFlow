@@ -30,6 +30,15 @@ async def get_pending_approvals(
     return BaseResponse(data=result)
 
 
+@router.get("/all", response_model=BaseResponse)
+async def get_all_approvals(
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    """获取我负责的所有预约（含已审批、已拒绝等）"""
+    result = await approval_service.get_all_approvals(db, current_user.id)
+    return BaseResponse(data=result)
+
+
 @router.post("/reservations/{reservation_id}/approve", response_model=BaseResponse)
 async def approve_reservation(
     reservation_id: int,

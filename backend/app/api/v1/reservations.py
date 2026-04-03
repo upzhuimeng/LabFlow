@@ -56,9 +56,12 @@ async def list_reservations(
         for r in reservations:
             from app.crud.user import get_user_by_id
             from app.crud.lab import get_lab_by_id
+            from app.crud.approval import get_approvals_by_reservation
 
             user = await get_user_by_id(db, r.user_id)
             lab = await get_lab_by_id(db, r.lab_id)
+            approvals = await get_approvals_by_reservation(db, r.id)
+            approval_comment = approvals[0].comment if approvals else None
             items.append(
                 {
                     "id": r.id,
@@ -68,6 +71,7 @@ async def list_reservations(
                     "end_time": r.end_time,
                     "status": r.status,
                     "created_at": r.created_at,
+                    "approval_comment": approval_comment,
                 }
             )
 
