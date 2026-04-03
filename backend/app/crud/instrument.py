@@ -81,8 +81,8 @@ async def update_instrument(
 
 
 async def delete_instrument(db: AsyncSession, instrument: Instrument) -> None:
-    """删除仪器（软删除，status=2）"""
-    instrument.status = 2
+    """删除仪器（软删除，status=3）"""
+    instrument.status = 3
     await db.commit()
 
 
