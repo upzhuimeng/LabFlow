@@ -183,6 +183,8 @@ export default function StatisticsReportPage() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [aiSummary, setAiSummary] = useState(null);
+  const [summarizing, setSummarizing] = useState(false);
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -204,6 +206,22 @@ export default function StatisticsReportPage() {
     fetchReport();
   }, [fetchReport]);
 
+  const handleAISummary = async () => {
+    if (!report) return;
+    setSummarizing(true);
+    try {
+      const res = await api.post('/agent/statistics/summarize', {
+        report_data: report,
+        report_type: reportType,
+      });
+      setAiSummary(res.data?.summary || '暂无总结');
+    } catch (err) {
+      toastRef.current.error(err.message || '生成总结失败');
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[calc(100vh-80px)]">
@@ -222,7 +240,7 @@ export default function StatisticsReportPage() {
         <p className="text-gray-600 mt-1">查看实验室使用情况统计</p>
       </div>
 
-      <div className="mb-6 flex gap-2">
+      <div className="mb-6 flex gap-2 items-center">
         <button
           onClick={() => setReportType('weekly')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -242,6 +260,33 @@ export default function StatisticsReportPage() {
           }`}
         >
           月报
+        </button>
+        <div className="flex-1" />
+        <button
+          onClick={handleAISummary}
+          disabled={summarizing || !report}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+            summarizing || !report
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-purple-600 text-white hover:bg-purple-700'
+          }`}
+        >
+          {summarizing ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              生成中...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              AI 总结
+            </>
+          )}
         </button>
       </div>
 
@@ -291,6 +336,20 @@ export default function StatisticsReportPage() {
               <StatsCard title="待审批" value={stats.pending} color="gray" />
             </div>
           </div>
+
+          {aiSummary && (
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <h3 className="text-lg font-semibold text-purple-800">AI 数据总结</h3>
+              </div>
+              <div className="prose prose-sm max-w-none">
+                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{aiSummary}</p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card title="实验室使用排名">

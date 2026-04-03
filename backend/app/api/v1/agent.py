@@ -3,7 +3,6 @@
 # Description: 智能助手 API 路由
 
 import json
-import re
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
@@ -11,7 +10,7 @@ from datetime import datetime
 
 from app.api.deps import get_db, get_current_user
 from app.agent.schemas.deps import ReservationAssistantDeps
-from app.core.agents import get_reservation_agent
+from app.core.agents import get_reservation_agent, get_statistics_agent
 from app.models.user import User
 from app.schemas.base import BaseResponse
 from app.crud import agent_log as agent_log_crud
@@ -33,6 +32,11 @@ class ReservationAssistantRequest(BaseModel):
 
 class CompleteConversationRequest(BaseModel):
     log_id: int = Field(..., description="日志ID")
+
+
+class StatisticsAssistantRequest(BaseModel):
+    report_data: dict = Field(..., description="报表数据")
+    report_type: str = Field(..., description="报表类型: weekly 或 monthly")
 
 
 @router.post("/reservation/assist", response_model=BaseResponse)
@@ -198,3 +202,48 @@ async def abandon_conversation(
     if not success:
         return BaseResponse(code=404, message="对话不存在")
     return BaseResponse(message="对话已标记为放弃")
+
+
+@router.post("/statistics/summarize", response_model=BaseResponse)
+async def summarize_statistics(
+    request: StatisticsAssistantRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    AI 统计总结助手
+
+    根据报表数据生成自然语言总结
+    """
+    if current_user.role not in [0, 1]:
+        return BaseResponse(code=403, message="权限不足，仅管理员可使用")
+
+    agent = get_statistics_agent()
+
+    deps = ReservationAssistantDeps(
+        user_id=current_user.id,
+        user_name=current_user.name,
+        db=db,
+    )
+
+    report_json = json.dumps(request.report_data, ensure_ascii=False)
+    prompt = f"请分析以下{request.report_type}数据并生成总结：\n\n{report_json}"
+
+    try:
+        result = await agent.run(prompt, deps=deps)
+        summary = result.output
+
+        return BaseResponse(
+            data={
+                "summary": summary,
+                "report_type": request.report_type,
+            }
+        )
+    except Exception as e:
+        return BaseResponse(
+            code=500,
+            data={
+                "summary": f"生成总结失败: {str(e)}",
+                "report_type": request.report_type,
+            },
+        )
