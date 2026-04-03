@@ -67,3 +67,22 @@
 
 - 删除操作均为**软删除**（数据仍保留，只标记为删除）
 - 所有操作都有**日志记录**，可追溯
+
+---
+
+## 数据库
+
+- 建表 SQL：[`DATABASE_SCHEMA.sql`](./DATABASE_SCHEMA.sql)（基于 Alembic 迁移生成）
+- 测试数据：[`TEST_DATA.sql`](./TEST_DATA.sql)
+
+### 数据库表（12 张）
+`alembic_version`, `user`, `lab`, `instrument`, `lab_user`, `lab_user_log`, `reservation`, `user_log`, `approval`, `instrument_log`, `notification`, `agent_log`
+
+### 测试账号
+> 注：超级管理员为虚拟用户（不在数据库中），使用 `.env` 中的凭证登录
+
+| 角色 | 账号 | 密码 |
+|------|------|------|
+| 超级管理员 | SuperAdmin@LabFlow.org | Admin123! |
+| 管理员 | 13800000001 | User123! |
+| 实验员 | 13800000002 ~ 13800000007 | User123! |
