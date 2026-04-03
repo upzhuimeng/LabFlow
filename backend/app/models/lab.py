@@ -29,7 +29,7 @@ class Lab(Base):
         SmallInteger,
         nullable=False,
         server_default="0",
-        comment="状态(0-正常 1-维护 2-停用)",
+        comment="状态(0-正常 1-维护 2-停用 3-删除)",
     )
 
     keyword: Mapped[str | None] = mapped_column(

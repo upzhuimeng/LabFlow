@@ -2,6 +2,7 @@
 # File: instrument.py
 # Description: Instrument CRUD 操作
 
+from datetime import datetime
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Tuple, List
@@ -53,7 +54,11 @@ async def create_instrument(
     db: AsyncSession, instrument_data: InstrumentCreate
 ) -> Instrument:
     """创建仪器"""
-    instrument = Instrument(**instrument_data.model_dump())
+    instrument_dict = instrument_data.model_dump()
+    instrument = Instrument(
+        **instrument_dict,
+        created_at=datetime.now(),
+    )
     db.add(instrument)
     await db.commit()
     await db.refresh(instrument)
