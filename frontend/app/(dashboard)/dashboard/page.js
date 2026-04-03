@@ -27,8 +27,8 @@ export default function Dashboard() {
         api.get('/labs', { params: { page: 1, page_size: 100 } }),
       ]);
 
-      const instrumentsData = instrumentsRes.data?.items || [];
-      const labsData = labsRes.data?.items || [];
+      const instrumentsData = (instrumentsRes.data?.items || []).filter(i => i.status !== 3);
+      const labsData = (labsRes.data?.items || []).filter(l => l.status !== 3);
 
       setInstruments(instrumentsData);
       setLabs(labsData);

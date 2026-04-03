@@ -39,6 +39,7 @@ class LabResponse(BaseModel):
     description: str | None
     manager_user_id: int | None = None
     manager_name: str | None = None
+    manager_phone: str | None = None
     created_at: datetime
     updated_at: datetime | None
 

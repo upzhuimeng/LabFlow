@@ -20,7 +20,6 @@ const EMPTY_FORM = {
   capacity: '',
   status: 0,
   manager_user_id: '',
-  phone: '',
   description: '',
 };
 
@@ -133,7 +132,6 @@ export default function LabPage() {
       capacity: lab.capacity || '',
       status: lab.status ?? 0,
       manager_user_id: lab.manager_user_id || '',
-      phone: lab.phone || '',
       description: lab.description || '',
     });
     setModalOpen(true);
@@ -312,7 +310,7 @@ export default function LabPage() {
                 </p>
                 <p>
                   <span className="font-medium">联系电话：</span>
-                  {lab.phone || '未填写'}
+                  {lab.manager_phone || '未填写'}
                 </p>
                 {lab.description && (
                   <p>
@@ -494,16 +492,6 @@ export default function LabPage() {
                     }))}
                     placeholder="请选择负责人"
                     searchPlaceholder="搜索用户..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">联系电话</label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="请输入联系电话"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
                 <div className="md:col-span-2">
