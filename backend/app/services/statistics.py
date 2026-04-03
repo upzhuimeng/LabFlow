@@ -327,3 +327,44 @@ async def generate_monthly_report(
         "time_slot_stats": time_slot_stats,
         "abnormal_users": abnormal_users,
     }
+
+
+async def generate_daily_report(
+    db: AsyncSession,
+    start_date: datetime,
+    end_date: datetime,
+) -> Dict[str, Any]:
+    """生成日报"""
+    current_stats = await get_reservation_stats(db, start_date, end_date)
+    lab_stats = await get_lab_usage_stats(db, start_date, end_date, limit=10)
+    user_stats = await get_user_activity_stats(db, start_date, end_date, limit=10)
+    time_slot_stats = await get_time_slot_stats(db, start_date, end_date)
+
+    prev_start = start_date - timedelta(days=1)
+    prev_end = end_date - timedelta(days=1)
+    prev_stats = await get_reservation_stats(db, prev_start, prev_end)
+
+    def calc_change(current: int, previous: int) -> float:
+        if previous == 0:
+            return 100.0 if current > 0 else 0.0
+        return round(((current - previous) / previous) * 100, 2)
+
+    return {
+        "report_type": "daily",
+        "start_date": start_date.strftime("%Y-%m-%d"),
+        "end_date": end_date.strftime("%Y-%m-%d"),
+        "current_period": current_stats,
+        "previous_period": prev_stats,
+        "changes": {
+            "total_change": calc_change(current_stats["total"], prev_stats["total"]),
+            "approved_change": calc_change(
+                current_stats["approved"], prev_stats["approved"]
+            ),
+            "rejected_change": calc_change(
+                current_stats["rejected"], prev_stats["rejected"]
+            ),
+        },
+        "lab_stats": lab_stats,
+        "user_stats": user_stats,
+        "time_slot_stats": time_slot_stats,
+    }

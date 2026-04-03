@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/v1/statistics", tags=["统计报表"])
 
 @router.get("/report", response_model=BaseResponse)
 async def get_report(
-    type: str = Query("weekly", description="报表类型: weekly 或 monthly"),
+    type: str = Query("weekly", description="报表类型: daily, weekly 或 monthly"),
     start_date: str | None = Query(None, description="开始日期 YYYY-MM-DD"),
     end_date: str | None = Query(None, description="结束日期 YYYY-MM-DD"),
     db: AsyncSession = Depends(get_db),
@@ -29,7 +29,24 @@ async def get_report(
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    if type == "weekly":
+    if type == "daily":
+        _start: datetime
+        _end: datetime
+        if not start_date:
+            _start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        else:
+            _start = datetime.strptime(start_date, "%Y-%m-%d")
+
+        if not end_date:
+            _end = now
+        else:
+            _end = datetime.strptime(end_date, "%Y-%m-%d").replace(
+                hour=23, minute=59, second=59
+            )
+
+        report = await statistics_service.generate_daily_report(db, _start, _end)
+
+    elif type == "weekly":
         _start: datetime
         _end: datetime
         if not start_date:

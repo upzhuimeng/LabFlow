@@ -215,7 +215,8 @@ export default function StatisticsReportPage() {
         report_data: report,
         report_type: reportType,
       });
-      toastRef.current.success(`${reportType === 'weekly' ? '周报' : '月报'}正在生成中，完成后将发送到您的信箱`);
+      const reportTypeName = reportType === 'daily' ? '日报' : reportType === 'weekly' ? '周报' : '月报';
+      toastRef.current.success(`${reportTypeName}正在生成中，完成后将发送到您的信箱`);
       setAiSummary(null);
 
       if (generatingTimerRef.current) {
@@ -249,6 +250,16 @@ export default function StatisticsReportPage() {
       </div>
 
       <div className="mb-6 flex gap-2 items-center">
+        <button
+          onClick={() => setReportType('daily')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            reportType === 'daily'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}
+        >
+          日报
+        </button>
         <button
           onClick={() => setReportType('weekly')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -315,7 +326,7 @@ export default function StatisticsReportPage() {
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-800">
-                {reportType === 'weekly' ? '本周' : '本月'}概况
+                {reportType === 'daily' ? '今日' : reportType === 'weekly' ? '本周' : '本月'}概况
               </h2>
               <span className="text-sm text-gray-500">
                 {report.start_date} ~ {report.end_date}

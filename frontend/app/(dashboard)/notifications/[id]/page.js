@@ -364,7 +364,7 @@ export default function NotificationDetailPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
                       <span className="text-sm font-medium text-indigo-700">
-                        {attachmentData.report_type === 'weekly' ? '周报' : '月报'} AI 总结
+                        {attachmentData.report_type === 'daily' ? '日报' : attachmentData.report_type === 'weekly' ? '周报' : '月报'} AI 总结
                       </span>
                     </div>
                     <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
