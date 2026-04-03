@@ -29,6 +29,7 @@ const EMPTY_USER_FORM = {
   password: '',
   email: '',
   role: 2,
+  is_active: 0,
 };
 
 export default function UserPage() {
@@ -142,6 +143,7 @@ export default function UserPage() {
       password: '',
       email: user.email || '',
       role: user.role ?? 2,
+      is_active: user.is_active ?? 0,
     });
     setModalOpen(true);
   };
@@ -219,7 +221,6 @@ export default function UserPage() {
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
         >
           <option value="all">全部角色</option>
-          <option value="0">超级管理员</option>
           <option value="1">管理员</option>
           <option value="2">实验员</option>
         </select>
@@ -413,7 +414,21 @@ export default function UserPage() {
                   >
                     <option value={2}>实验员</option>
                     <option value={1}>管理员</option>
-                    <option value={0}>超级管理员</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    状态
+                  </label>
+                  <select
+                    name="is_active"
+                    value={formData.is_active}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
+                  >
+                    <option value={0}>正常</option>
+                    <option value={1}>封禁</option>
+                    <option value={2}>注销</option>
                   </select>
                 </div>
               </div>
@@ -430,7 +445,7 @@ export default function UserPage() {
                   disabled={submitting}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
                 >
-                  {submitting ? '创建中...' : '创建'}
+                  {submitting ? (editingUser ? '更新中...' : '创建中...') : (editingUser ? '更新' : '创建')}
                 </button>
               </div>
             </form>
