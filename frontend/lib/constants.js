@@ -14,6 +14,7 @@ export const STATUS = {
     NORMAL: 0,
     MAINTENANCE: 1,
     DISABLED: 2,
+    DELETED: 3,
   },
   USER: {
     ACTIVE: 0,
@@ -43,6 +44,7 @@ export const STATUS_TEXT = {
     [STATUS.LAB.NORMAL]: '正常',
     [STATUS.LAB.MAINTENANCE]: '维护中',
     [STATUS.LAB.DISABLED]: '停用',
+    [STATUS.LAB.DELETED]: '已删除',
   },
   USER: {
     [STATUS.USER.ACTIVE]: '正常',
