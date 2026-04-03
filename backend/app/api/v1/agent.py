@@ -204,17 +204,31 @@ async def abandon_conversation(
     return BaseResponse(message="对话已标记为放弃")
 
 
-async def send_summary_notification_task(
+async def generate_and_notify_task(
     user_id: int,
+    user_name: str,
     report_data: dict,
     report_type: str,
-    summary: str,
 ):
-    """后台任务：发送通知"""
+    """后台任务：生成 AI 总结并发送通知"""
     from app.db.session import Session_Local
 
     async with Session_Local() as db:
         try:
+            agent = get_statistics_agent()
+
+            deps = ReservationAssistantDeps(
+                user_id=user_id,
+                user_name=user_name,
+                db=db,
+            )
+
+            report_json = json.dumps(report_data, ensure_ascii=False)
+            prompt = f"请分析以下{report_type}数据并生成总结：\n\n{report_json}"
+
+            result = await agent.run(prompt, deps=deps)
+            summary = result.output
+
             report_type_text = "周报" if report_type == "weekly" else "月报"
             period_info = f"{report_data.get('start_date', '')} 至 {report_data.get('end_date', '')}"
 
@@ -245,50 +259,23 @@ async def summarize_statistics(
     request: StatisticsAssistantRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """
     AI 统计总结助手
 
-    根据报表数据生成自然语言总结，立即返回结果并异步发送通知
+    后台异步生成总结，完成后发送通知到用户消息信箱
     """
     if current_user.role not in [0, 1]:
         return BaseResponse(code=403, message="权限不足，仅管理员可使用")
 
-    agent = get_statistics_agent()
-
-    deps = ReservationAssistantDeps(
-        user_id=current_user.id,
-        user_name=current_user.name,
-        db=db,
+    background_tasks.add_task(
+        generate_and_notify_task,
+        current_user.id,
+        current_user.name,
+        request.report_data,
+        request.report_type,
     )
 
-    report_json = json.dumps(request.report_data, ensure_ascii=False)
-    prompt = f"请分析以下{request.report_type}数据并生成总结：\n\n{report_json}"
-
-    try:
-        result = await agent.run(prompt, deps=deps)
-        summary = result.output
-
-        background_tasks.add_task(
-            send_summary_notification_task,
-            current_user.id,
-            request.report_data,
-            request.report_type,
-            summary,
-        )
-
-        return BaseResponse(
-            data={
-                "summary": summary,
-                "report_type": request.report_type,
-            },
-        )
-    except Exception as e:
-        return BaseResponse(
-            code=500,
-            data={
-                "summary": f"生成总结失败: {str(e)}",
-                "report_type": request.report_type,
-            },
-        )
+    return BaseResponse(
+        message=f"正在生成{request.report_type == 'weekly' and '周报' or '月报'}总结，完成后将发送到您的信箱",
+    )

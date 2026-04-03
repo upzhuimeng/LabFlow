@@ -184,6 +184,7 @@ export default function StatisticsReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [aiSummary, setAiSummary] = useState(null);
+  const [generating, setGenerating] = useState(false);
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -207,6 +208,7 @@ export default function StatisticsReportPage() {
 
   const handleAISummary = async () => {
     if (!report) return;
+    setGenerating(true);
     try {
       await api.post('/agent/statistics/summarize', {
         report_data: report,
@@ -216,6 +218,8 @@ export default function StatisticsReportPage() {
       setAiSummary(null);
     } catch (err) {
       toastRef.current.error(err.message || '生成总结失败');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -261,17 +265,29 @@ export default function StatisticsReportPage() {
         <div className="flex-1" />
         <button
           onClick={handleAISummary}
-          disabled={!report}
+          disabled={generating || !report}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-            !report
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            generating || !report
+              ? 'bg-purple-300 text-white cursor-not-allowed'
               : 'bg-purple-600 text-white hover:bg-purple-700'
           }`}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          AI 总结
+          {generating ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              生成中...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              AI 总结
+            </>
+          )}
         </button>
       </div>
 
