@@ -145,22 +145,6 @@ export default function LabPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name?.trim()) {
-      toast.error('请输入实验室名称');
-      return;
-    }
-    if (!formData.address?.trim()) {
-      toast.error('请输入实验室地址');
-      return;
-    }
-    if (!formData.capacity || parseInt(formData.capacity) < 1) {
-      toast.error('请输入有效的容纳人数');
-      return;
-    }
-    if (!formData.phone?.trim()) {
-      toast.error('请输入联系电话');
-      return;
-    }
     try {
       const { manager_user_id, ...rest } = formData;
       const submitData = {
@@ -512,14 +496,11 @@ export default function LabPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    联系电话 <span className="text-red-500">*</span>
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">联系电话</label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
                     placeholder="请输入联系电话"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
