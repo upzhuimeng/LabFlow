@@ -354,22 +354,77 @@ export default function NotificationDetailPage() {
               } catch {
                 return null;
               }
+              const stats = attachmentData.stats || {};
+              const labStats = attachmentData.lab_stats || [];
               return (
-                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200 p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span className="text-sm font-medium text-indigo-700">
-                      {attachmentData.report_type === 'weekly' ? '周报' : '月报'} AI 总结
-                    </span>
+                <div className="space-y-4">
+                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span className="text-sm font-medium text-indigo-700">
+                        {attachmentData.report_type === 'weekly' ? '周报' : '月报'} AI 总结
+                      </span>
+                    </div>
+                    <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                      {attachmentData.summary}
+                    </p>
+                    <div className="mt-3 pt-3 border-t border-indigo-200 text-xs text-gray-500">
+                      统计周期：{attachmentData.period}
+                    </div>
                   </div>
-                  <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
-                    {attachmentData.summary}
-                  </p>
-                  <div className="mt-3 pt-3 border-t border-indigo-200 text-xs text-gray-500">
-                    统计周期：{attachmentData.period}
-                  </div>
+
+                  {Object.keys(stats).length > 0 && (
+                    <div className="bg-white rounded-lg border border-gray-200 p-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">数据概览</h4>
+                      <div className="grid grid-cols-5 gap-2">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-blue-600">{stats.total || 0}</div>
+                          <div className="text-xs text-gray-500">总数</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-green-600">{stats.approved || 0}</div>
+                          <div className="text-xs text-gray-500">已通过</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-red-600">{stats.rejected || 0}</div>
+                          <div className="text-xs text-gray-500">已拒绝</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-yellow-600">{stats.cancelled || 0}</div>
+                          <div className="text-xs text-gray-500">已取消</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-gray-600">{stats.pending || 0}</div>
+                          <div className="text-xs text-gray-500">待审批</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {labStats.length > 0 && (
+                    <div className="bg-white rounded-lg border border-gray-200 p-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">实验室使用排名 TOP 3</h4>
+                      <div className="space-y-2">
+                        {labStats.slice(0, 3).map((lab, index) => (
+                          <div key={lab.lab_id} className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2">
+                              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                                index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                                index === 1 ? 'bg-gray-100 text-gray-700' :
+                                'bg-orange-100 text-orange-700'
+                              }`}>
+                                {index + 1}
+                              </span>
+                              <span className="text-gray-700">{lab.lab_name}</span>
+                            </span>
+                            <span className="text-gray-500">{lab.reservation_count} 次预约</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()

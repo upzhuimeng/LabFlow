@@ -241,6 +241,9 @@ async def summarize_statistics(
             "report_type": request.report_type,
             "period": period_info,
             "stats": request.report_data.get("current_period", {}),
+            "lab_stats": request.report_data.get("lab_stats", []),
+            "user_stats": request.report_data.get("user_stats", []),
+            "changes": request.report_data.get("changes", {}),
         }
 
         await notification_crud.create_notification(
@@ -248,7 +251,7 @@ async def summarize_statistics(
             user_id=current_user.id,
             title=f"AI 数据总结（{report_type_text}）",
             content=f"{period_info} {report_type_text}数据 AI 总结已完成，点击查看详情",
-            notif_type=3,
+            notif_type=5,
             attachment=json.dumps(attachment_data, ensure_ascii=False),
         )
 
