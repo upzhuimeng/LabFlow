@@ -30,7 +30,10 @@ class Notification(Base):
         Text, nullable=True, comment="附件JSON数据（智能推荐等）"
     )
     is_read: Mapped[int] = mapped_column(
-        SmallInteger, nullable=False, default=0, comment="是否已读：0-未读，1-已读"
+        SmallInteger,
+        nullable=False,
+        default=0,
+        comment="状态：0-未读，1-已读，2-已删除",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now(), comment="创建时间"

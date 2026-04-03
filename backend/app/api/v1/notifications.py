@@ -92,3 +92,18 @@ async def mark_notification_read(
     if not success:
         return BaseResponse(code=404, message="通知不存在")
     return BaseResponse(message="已标记为已读")
+
+
+@router.delete("/{notification_id}", response_model=BaseResponse)
+async def delete_notification(
+    notification_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """删除通知（软删除）"""
+    success = await notification_crud.delete_notification(
+        db, notification_id, current_user.id
+    )
+    if not success:
+        return BaseResponse(code=404, message="通知不存在")
+    return BaseResponse(message="通知已删除")
