@@ -283,13 +283,15 @@ export default function InstrumentPage() {
                       删除
                     </button>
                   </>
-                ) : (
+                ) : instrument.status === 0 ? (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleReserve(instrument); }}
                     className="px-3 py-1.5 text-sm border border-blue-200 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
                   >
                     预约
                   </button>
+                ) : (
+                  <span className="text-sm text-gray-400">不可预约</span>
                 )}
               </div>
             </div>
