@@ -7,7 +7,27 @@
 export function formatDate(date, format = 'YYYY-MM-DD') {
   if (!date) return '';
   
-  const d = new Date(date);
+  let d;
+  if (typeof date === 'string') {
+    const dateStr = date.endsWith('Z') ? date : date.replace('T', ' ');
+    d = new Date(dateStr);
+    if (isNaN(d.getTime())) {
+      const parts = date.split(/[- T:]/);
+      if (parts.length >= 5) {
+        d = new Date(
+          parseInt(parts[0]),
+          parseInt(parts[1]) - 1,
+          parseInt(parts[2]),
+          parseInt(parts[3] || 0),
+          parseInt(parts[4] || 0),
+          parseInt(parts[5] || 0)
+        );
+      }
+    }
+  } else {
+    d = new Date(date);
+  }
+  
   if (isNaN(d.getTime())) return '';
   
   const year = d.getFullYear();

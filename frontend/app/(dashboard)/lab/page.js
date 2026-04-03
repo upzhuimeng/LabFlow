@@ -51,6 +51,7 @@ export default function LabPage() {
   const [editingLab, setEditingLab] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteInstruments, setDeleteInstruments] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [showMaintenanceAndDisabled, setShowMaintenanceAndDisabled] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
@@ -112,8 +113,10 @@ export default function LabPage() {
 
   useEffect(() => {
     fetchLabs();
-    fetchUsers();
-  }, [fetchLabs, fetchUsers]);
+    if (isAdmin) {
+      fetchUsers();
+    }
+  }, [fetchLabs, fetchUsers, isAdmin]);
 
   const handleAdd = () => {
     setEditingLab(null);
@@ -270,7 +273,8 @@ export default function LabPage() {
           labs.map((lab) => (
             <div
               key={lab.id}
-              className="border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300"
+              onClick={() => router.push(`/lab/${lab.id}`)}
+              className="border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 cursor-pointer"
             >
               <div className="flex justify-between items-start mb-2">
                 <h2 className="text-lg font-semibold text-blue-600">{lab.name}</h2>
@@ -312,13 +316,23 @@ export default function LabPage() {
                 {isAdmin && lab.status !== 3 ? (
                   <>
                     <button
-                      onClick={() => handleEdit(lab)}
+                      onClick={(e) => { e.stopPropagation(); handleEdit(lab); }}
                       className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors"
                     >
                       编辑
                     </button>
                     <button
-                      onClick={() => setDeleteConfirm(lab)}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          const res = await api.get('/instruments', { params: { lab_id: lab.id, page: 1, page_size: 100 } });
+                          const instruments = res.data?.items || [];
+                          setDeleteInstruments(instruments);
+                        } catch (err) {
+                          setDeleteInstruments([]);
+                        }
+                        setDeleteConfirm(lab);
+                      }}
                       className="px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
                     >
                       删除
@@ -504,19 +518,34 @@ export default function LabPage() {
 
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-4">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-800 text-center mb-2">确认删除</h3>
-            <p className="text-gray-500 text-sm text-center mb-6">
+            <p className="text-gray-500 text-sm text-center mb-4">
               确定要删除实验室「{deleteConfirm.name}」吗？此操作无法撤销。
             </p>
+            {deleteInstruments.length > 0 && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-yellow-700 text-sm font-medium mb-2">
+                  ⚠️ 该实验室下有 {deleteInstruments.length} 台仪器，删除后这些仪器也将被标记为删除：
+                </p>
+                <ul className="text-sm text-yellow-600 space-y-1">
+                  {deleteInstruments.slice(0, 5).map(inst => (
+                    <li key={inst.id}>• {inst.name}（{inst.model || '无型号'}）</li>
+                  ))}
+                  {deleteInstruments.length > 5 && (
+                    <li>...还有 {deleteInstruments.length - 5} 台</li>
+                  )}
+                </ul>
+              </div>
+            )}
             <div className="flex gap-3">
               <button
-                onClick={() => setDeleteConfirm(null)}
+                onClick={() => { setDeleteConfirm(null); setDeleteInstruments([]); }}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-sm"
               >
                 取消

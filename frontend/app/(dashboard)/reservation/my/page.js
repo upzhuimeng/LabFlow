@@ -10,7 +10,7 @@ import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { STATUS_TEXT } from '@/lib/constants';
 import api from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { SearchableSelect } from '@/components/ui';
@@ -78,8 +78,7 @@ function ReservationForm({ labId, instrumentId, onSuccess, onCancel }) {
     setSubmitting(true);
     try {
       const formatdatetimeForApi = (datetimeStr) => {
-        const date = new Date(datetimeStr);
-        return date.toISOString();
+        return datetimeStr.replace('T', ' ') + ':00';
       };
       const payload = {
         lab_id: labId ? parseInt(labId) : null,
@@ -220,7 +219,7 @@ function MyReservationsContent() {
   const fetchLabs = useCallback(async () => {
     try {
       const res = await api.get('/labs', { params: { page: 1, page_size: 100 } });
-      setLabs(res.data?.items || []);
+      setLabs((res.data?.items || []).filter(lab => lab.status !== 3));
     } catch (err) {
       console.error('获取实验室失败:', err);
     }
@@ -379,12 +378,18 @@ function MyReservationsContent() {
                   <div className="space-y-1 text-sm text-gray-700">
                     <p>
                       <span className="font-medium">预约时间：</span>
-                      {formatDate(reservation.start_time)} ~ {formatDate(reservation.end_time)}
+                      {formatDateTime(reservation.start_time)} ~ {formatDateTime(reservation.end_time)}
                     </p>
                     <p>
                       <span className="font-medium">用途：</span>
                       {reservation.purpose || '-'}
                     </p>
+                    {reservation.approval_comment && (
+                      <p>
+                        <span className="font-medium">审批意见：</span>
+                        {reservation.approval_comment}
+                      </p>
+                    )}
                   </div>
 
                   <div className="border-t border-gray-300/70 my-4"></div>
