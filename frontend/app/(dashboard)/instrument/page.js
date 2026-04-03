@@ -31,6 +31,7 @@ const STATUS_BADGE_CLASS = {
   0: 'bg-green-100 text-green-700',
   1: 'bg-yellow-100 text-yellow-700',
   2: 'bg-gray-100 text-gray-700',
+  3: 'bg-red-100 text-red-700',
 };
 
 export default function InstrumentPage() {
@@ -48,6 +49,9 @@ export default function InstrumentPage() {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [showMaintenanceAndDisabled, setShowMaintenanceAndDisabled] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingInstrument, setEditingInstrument] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -66,19 +70,28 @@ export default function InstrumentPage() {
         params.keyword = activeSearch.trim();
       }
       const res = await api.get('/instruments', { params });
-      const data = res.data;
-      setInstruments(data.items || []);
+      let data = res.data?.items || [];
+      
+      if (showDeleted) {
+        data = data.filter(instrument => instrument.status === 3);
+      } else if (showMaintenanceAndDisabled) {
+        data = data.filter(instrument => instrument.status !== 3);
+      } else {
+        data = data.filter(instrument => instrument.status === 0);
+      }
+      
+      setInstruments(data);
       setPagination(prev => ({
         ...prev,
-        total: data.pagination?.total || 0,
-        totalPages: data.pagination?.total_pages || 0,
+        total: data.length,
+        totalPages: 1,
       }));
     } catch (err) {
       setError(err.message || '获取数据失败');
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize, activeSearch]);
+  }, [pagination.page, pagination.pageSize, activeSearch, showMaintenanceAndDisabled, showDeleted, isAdmin]);
 
   const fetchLabs = async () => {
     try {
@@ -194,17 +207,6 @@ export default function InstrumentPage() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 gap-3 mb-6">
-        {/* {isAdmin && (
-          <button
-            onClick={handleAdd}
-            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            新增设备
-          </button>
-        )} */}
         <input
           type="text"
           placeholder="搜索设备名称..."
@@ -215,6 +217,42 @@ export default function InstrumentPage() {
           onKeyDown={handleKeyDown}
           className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
         />
+        <button
+          onClick={handleSearch}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+        >
+          搜索
+        </button>
+        <label className={`flex items-center space-x-2 text-sm text-gray-600 ${showDeleted ? 'opacity-50' : ''}`}>
+          <input
+            type="checkbox"
+            checked={showMaintenanceAndDisabled}
+            disabled={showDeleted}
+            onChange={(e) => {
+              setShowMaintenanceAndDisabled(e.target.checked);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-300"
+          />
+          <span>显示维护和停用</span>
+        </label>
+        {isAdmin && (
+          <label className="flex items-center space-x-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={showDeleted}
+              onChange={(e) => {
+                setShowDeleted(e.target.checked);
+                if (e.target.checked) {
+                  setShowMaintenanceAndDisabled(false);
+                }
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-300"
+            />
+            <span>只看已删除</span>
+          </label>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4">
