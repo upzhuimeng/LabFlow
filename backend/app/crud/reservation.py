@@ -122,8 +122,8 @@ async def reapply_reservation(
 async def cancel_reservation(
     db: AsyncSession, db_reservation: Reservation
 ) -> Reservation:
-    """取消预约（软删除）"""
-    db_reservation.is_deleted = 1
+    """取消预约（状态改为已取消）"""
+    db_reservation.status = 3
     db_reservation.updated_at = datetime.now()
     await db.commit()
     await db.refresh(db_reservation)
@@ -136,8 +136,8 @@ async def check_time_conflict(
     start_time: datetime,
     end_time: datetime,
     exclude_id: int | None = None,
-) -> bool:
-    """检查时间冲突"""
+) -> list[Reservation]:
+    """检查时间冲突，返回冲突的预约列表"""
     query = select(Reservation).where(
         Reservation.lab_id == lab_id,
         Reservation.is_deleted == 0,
@@ -150,4 +150,17 @@ async def check_time_conflict(
         query = query.where(Reservation.id != exclude_id)
 
     result = await db.execute(query)
-    return result.scalar_one_or_none() is not None
+    return list(result.scalars().all())
+
+
+async def get_active_reservations_by_lab(
+    db: AsyncSession, lab_id: int
+) -> List[Reservation]:
+    """获取实验室的有效预约（审批中或已通过）"""
+    query = select(Reservation).where(
+        Reservation.lab_id == lab_id,
+        Reservation.is_deleted == 0,
+        Reservation.status.in_([0, 1]),
+    )
+    result = await db.execute(query)
+    return list(result.scalars().all())

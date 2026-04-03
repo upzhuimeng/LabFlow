@@ -82,3 +82,18 @@ async def delete_instrument(db: AsyncSession, instrument: Instrument) -> None:
     """删除仪器（软删除，status=2）"""
     instrument.status = 2
     await db.commit()
+
+
+async def soft_delete_instruments_by_lab(db: AsyncSession, lab_id: int) -> int:
+    """根据实验室ID软删除该实验室下的所有仪器（status=3）"""
+    result = await db.execute(
+        select(Instrument).where(Instrument.lab_id == lab_id, Instrument.status != 3)
+    )
+    instruments = result.scalars().all()
+    count = 0
+    for instrument in instruments:
+        instrument.status = 3
+        count += 1
+    if count > 0:
+        await db.commit()
+    return count
