@@ -88,6 +88,9 @@ async def create_user(
     if current_user.role not in [0, 1]:
         raise HTTPException(status_code=403, detail="权限不足")
 
+    if user_data.role == 0:
+        raise HTTPException(status_code=400, detail="无法创建超级管理员用户")
+
     existing = await user_crud.get_user_by_phone(db, user_data.phone)
     if existing:
         raise HTTPException(status_code=400, detail="该手机号已注册")
@@ -125,6 +128,9 @@ async def update_user(
     """更新用户（管理员）"""
     if current_user.role not in [0, 1]:
         raise HTTPException(status_code=403, detail="权限不足")
+
+    if user_data.role is not None and user_data.role == 0:
+        raise HTTPException(status_code=400, detail="无法将用户设置为超级管理员")
 
     user = await user_crud.get_user_by_id(db, user_id)
     if not user:

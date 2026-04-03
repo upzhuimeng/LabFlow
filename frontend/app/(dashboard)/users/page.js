@@ -413,7 +413,6 @@ export default function UserPage() {
                   >
                     <option value={2}>实验员</option>
                     <option value={1}>管理员</option>
-                    <option value={0}>超级管理员</option>
                   </select>
                 </div>
               </div>
