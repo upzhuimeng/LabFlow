@@ -82,8 +82,8 @@ export default function InstrumentPage() {
 
   const fetchLabs = async () => {
     try {
-      const res = await api.get('/labs', { params: { page: 1, page_size: 100 } });
-      setLabs((res.data?.items || []).filter(lab => lab.status !== 3));
+      const res = await api.get('/labs', { params: { page: 1, page_size: 100, status: 0 } });
+      setLabs(res.data?.items || []);
     } catch (err) {
       console.error('获取实验室失败:', err);
     }

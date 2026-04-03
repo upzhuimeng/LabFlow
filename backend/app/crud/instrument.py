@@ -27,11 +27,13 @@ async def get_instruments(
     lab_id: int | None = None,
     keyword: str | None = None,
 ) -> Tuple[List[Instrument], int]:
-    """获取仪器列表"""
+    """获取仪器列表（默认排除已删除的仪器）"""
     query = select(Instrument)
 
     if status is not None:
         query = query.where(Instrument.status == status)
+    else:
+        query = query.where(Instrument.status != 3)
 
     if lab_id is not None:
         query = query.where(Instrument.lab_id == lab_id)

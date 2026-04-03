@@ -26,11 +26,13 @@ async def get_labs(
     status: int | None = None,
     keyword: str | None = None,
 ) -> Tuple[List[Lab], int]:
-    """获取实验室列表"""
+    """获取实验室列表（默认排除已删除的实验室）"""
     query = select(Lab)
 
     if status is not None:
         query = query.where(Lab.status == status)
+    else:
+        query = query.where(Lab.status != 3)
 
     if keyword and keyword.strip():
         query = query.where(Lab.name.ilike(f"%{keyword}%"))
