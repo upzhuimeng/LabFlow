@@ -5,7 +5,7 @@
 from datetime import datetime
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Tuple, Sequence
+from typing import Tuple, Sequence, List
 
 from app.models.lab import Lab
 from app.models.lab_user import LabUser

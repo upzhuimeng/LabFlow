@@ -47,7 +47,7 @@ async def create_lab(
 async def list_labs(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    status: Optional[int] = Query(None, ge=0, le=2),
+    status: Optional[int] = Query(None, ge=0, le=3),
     keyword: Optional[str] = Query(None, max_length=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

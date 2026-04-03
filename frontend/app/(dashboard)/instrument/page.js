@@ -56,9 +56,6 @@ export default function InstrumentPage() {
   const [editingInstrument, setEditingInstrument] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [showMaintenanceAndDisabled, setShowMaintenanceAndDisabled] = useState(false);
-  const [showDeleted, setShowDeleted] = useState(false);
   const [labs, setLabs] = useState([]);
 
   const fetchInstruments = useCallback(async () => {

@@ -67,16 +67,13 @@ export default function LabPage() {
       if (activeSearch && activeSearch.trim()) {
         params.keyword = activeSearch.trim();
       }
-      const res = await api.get('/labs', { params });
-      let data = res.data?.items || [];
-      
       if (showDeleted) {
-        data = data.filter(lab => lab.status === 3);
-      } else if (showMaintenanceAndDisabled) {
-        data = data.filter(lab => lab.status !== 3);
-      } else {
-        data = data.filter(lab => lab.status === 0);
+        params.status = 3;
+      } else if (!showMaintenanceAndDisabled) {
+        params.status = 0;
       }
+      const res = await api.get('/labs', { params });
+      const data = res.data?.items || [];
       
       setLabs(data);
       setPagination(prev => ({
