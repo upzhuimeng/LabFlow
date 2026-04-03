@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-# File: exceptions.py
-# Created: 2026-02-27 01:07
+# File: base.py
+# Created: 2026-03-11 10:18
 # Author: zhuimeng
-# Descriptaion: 自定义错误类
+# Description: 基础异常
 
 
 class ConfigError(Exception):

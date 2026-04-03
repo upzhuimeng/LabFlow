@@ -2,43 +2,32 @@
 # File: config.py
 # Created: 2026-02-27 00:34
 # Author: zhuimeng
-# Descriptaion: 通用配置
+# Description: 配置聚合
 
-from .environments import BaseEnv, DevEnv, ProdEnv
-from .exceptions import ConfigError
-from typing import Type
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from .environments import AppEnv
+from .database import DatabaseSetting
+from .security import jwt_settings, JWTSettings
+from .agents import AgentSetting
 
 
-class EnvConfig:
-    """
-    环境配置类
-    """
+class SuperAdminSettings:
+    def __init__(self):
+        self.USERNAME: str = os.getenv("SUPER_ADMIN_USERNAME", "")
+        self.PASSWORD: str = os.getenv("SUPER_ADMIN_PASSWORD", "")
 
-    # 添加环境配置
-    env_map: dict[str, Type[BaseEnv]] = {"DEV": DevEnv, "PROD": ProdEnv}
 
-    def __init__(self, env: str = "DEV") -> None:
-        """
-        初始化环境配置
+class Setting:
+    def __init__(self):
+        self.app_env: AppEnv = AppEnv()
+        self.db_setting: DatabaseSetting = DatabaseSetting()
+        self.jwt_settings: JWTSettings = jwt_settings
+        self.agent_setting: AgentSetting = AgentSetting()
+        self.super_admin: SuperAdminSettings = SuperAdminSettings()
 
-        Args:
-            env: 环境名称, 可选: DEV, PROD
-        """
-        if env not in self.env_map:
-            raise ConfigError(f"Unknown enviroment: {env}")
 
-        # 加载对应配置的类对象
-        self.env: BaseEnv = self.env_map[env]()
-
-    @property
-    def HOST(self) -> str:
-        return self.env.HOST
-
-    @property
-    def PORT(self) -> int:
-        return self.env.PORT
-
-    @property
-    def RELOAD(self) -> bool:
-        return self.env.RELOAD
-
+setting = Setting()

@@ -1,0 +1,7 @@
+.idea/
+.vscode/
+
+# Archive (old backup files)
+archive/
+archived/
+.ruff_cache/

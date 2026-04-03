@@ -1,0 +1,1330 @@
+openapi: 3.0.3
+info:
+  title: LabFlow API
+  description: |
+    LabFlow 实验室管理系统 API 文档
+    - Base URL: http://localhost:8000/api/v1
+    - 认证方式: JWT Token (Bearer Token)
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development Server
+
+tags:
+  - name: Auth
+    description: 认证接口
+  - name: User
+    description: 用户管理接口
+  - name: Lab
+    description: 实验室管理接口
+  - name: Instrument
+    description: 仪器管理接口
+  - name: Reservation
+    description: 预约管理接口
+  - name: Approval
+    description: 审批管理接口
+
+paths:
+  /auth/login:
+    post:
+      summary: 用户登录
+      description: 支持 identifier (手机号/邮箱/用户名) 登录
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - identifier
+                - password
+              properties:
+                identifier:
+                  type: string
+                  description: 手机号、邮箱或用户名
+                  example: "13800138000"
+                password:
+                  type: string
+                  description: 密码
+                  example: "User123!"
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+              example:
+                code: 200
+                message: success
+                data:
+                  access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  token_type: bearer
+        '400':
+          description: 参数错误
+          content:
+            application/json:
+              example:
+                code: 400
+                message: 请提供 identifier 和密码
+                data: null
+        '401':
+          description: 认证失败
+          content:
+            application/json:
+              example:
+                code: 401
+                message: 手机号或密码错误
+                data: null
+
+  /auth/logout:
+    post:
+      summary: 用户登出
+      description: 清除登录状态
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 登出成功
+          content:
+            application/json:
+              example:
+                code: 200
+                message: 已退出登录
+                data: null
+
+  /users/me:
+    get:
+      summary: 获取当前用户信息
+      tags:
+        - User
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+              example:
+                code: 200
+                message: success
+                data:
+                  id: 1
+                  name: 张三
+                  phone: "13800138000"
+                  email: "user@example.com"
+                  role: 2
+                  is_active: 0
+                  created_at: "2024-01-15T10:30:00Z"
+        '401':
+          description: 未登录
+    put:
+      summary: 更新当前用户信息
+      tags:
+        - User
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  /users/me/permissions:
+    get:
+      summary: 获取当前用户权限
+      tags:
+        - User
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+              example:
+                code: 200
+                message: success
+                data:
+                  is_lab_manager: true
+
+  /users:
+    get:
+      summary: 获取用户列表
+      description: 管理员专用
+      tags:
+        - User
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: role
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1, 2]
+        - name: is_active
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1, 2]
+        - name: keyword
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '403':
+          description: 权限不足
+    post:
+      summary: 创建用户
+      description: 管理员专用，创建新用户
+      tags:
+        - User
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '400':
+          description: 创建失败（手机号已注册等）
+          content:
+            application/json:
+              example:
+                code: 400
+                message: 该手机号已注册
+                data: null
+        '403':
+          description: 权限不足
+
+  /users/{user_id}:
+    get:
+      summary: 获取用户详情
+      tags:
+        - User
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '404':
+          description: 用户不存在
+    put:
+      summary: 更新用户
+      description: 管理员专用
+      tags:
+        - User
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: 更新成功
+        '403':
+          description: 权限不足
+        '404':
+          description: 用户不存在
+
+  /labs:
+    get:
+      summary: 获取实验室列表
+      tags:
+        - Lab
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1, 2]
+        - name: keyword
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+    post:
+      summary: 创建实验室
+      description: 管理员专用
+      tags:
+        - Lab
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabCreate'
+      responses:
+        '201':
+          description: 创建成功
+        '403':
+          description: 权限不足
+
+  /labs/{lab_id}:
+    get:
+      summary: 获取实验室详情
+      tags:
+        - Lab
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lab_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '404':
+          description: 实验室不存在
+    put:
+      summary: 更新实验室
+      description: 管理员专用
+      tags:
+        - Lab
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lab_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabUpdate'
+      responses:
+        '200':
+          description: 更新成功
+        '404':
+          description: 实验室不存在
+    delete:
+      summary: 删除实验室
+      description: 管理员专用（软删除）
+      tags:
+        - Lab
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lab_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 删除成功
+        '404':
+          description: 实验室不存在
+
+  /labs/{lab_id}/managers:
+    get:
+      summary: 获取实验室负责人列表
+      tags:
+        - Lab
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lab_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  /labs/{lab_id}/managers/{user_id}:
+    post:
+      summary: 添加实验室负责人
+      description: 管理员专用
+      tags:
+        - Lab
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lab_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 添加成功
+        '400':
+          description: 该用户已是实验室负责人
+        '404':
+          description: 实验室或用户不存在
+    delete:
+      summary: 移除实验室负责人
+      description: 管理员专用
+      tags:
+        - Lab
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lab_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 移除成功
+        '404':
+          description: 该用户不是实验室负责人
+
+  /instruments:
+    get:
+      summary: 获取仪器列表
+      tags:
+        - Instrument
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1, 2]
+        - name: lab_id
+          in: query
+          schema:
+            type: integer
+        - name: keyword
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+    post:
+      summary: 创建仪器
+      description: 管理员专用
+      tags:
+        - Instrument
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstrumentCreate'
+      responses:
+        '201':
+          description: 创建成功
+        '400':
+          description: 实验室不存在
+        '403':
+          description: 权限不足
+
+  /instruments/{instrument_id}:
+    get:
+      summary: 获取仪器详情
+      tags:
+        - Instrument
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: instrument_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '404':
+          description: 仪器不存在
+    put:
+      summary: 更新仪器
+      description: 管理员专用
+      tags:
+        - Instrument
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: instrument_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstrumentUpdate'
+      responses:
+        '200':
+          description: 更新成功
+        '404':
+          description: 仪器不存在
+    delete:
+      summary: 删除仪器
+      description: 管理员专用（软删除）
+      tags:
+        - Instrument
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: instrument_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 删除成功
+        '404':
+          description: 仪器不存在
+
+  /reservations:
+    get:
+      summary: 获取预约列表
+      description: 管理员查看全部，普通用户查看自己的
+      tags:
+        - Reservation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1, 2, 3, 4]
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+    post:
+      summary: 创建预约
+      tags:
+        - Reservation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationCreate'
+      responses:
+        '201':
+          description: 预约提交成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '400':
+          description: 创建失败
+
+  /reservations/{reservation_id}:
+    get:
+      summary: 获取预约详情
+      tags:
+        - Reservation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '403':
+          description: 无权查看
+        '404':
+          description: 预约不存在
+    put:
+      summary: 更新预约
+      description: 仅限审批中的预约，本人可操作
+      tags:
+        - Reservation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationUpdate'
+      responses:
+        '200':
+          description: 更新成功
+        '400':
+          description: 更新失败
+        '403':
+          description: 无权操作
+    delete:
+      summary: 取消预约
+      description: 本人或管理员可取消
+      tags:
+        - Reservation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取消成功
+        '400':
+          description: 当前状态无法取消
+
+  /reservations/{reservation_id}/reapply:
+    put:
+      summary: 重新申请
+      description: 被拒绝后修改并重新提交预约
+      tags:
+        - Reservation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationReapply'
+      responses:
+        '200':
+          description: 重新申请成功
+        '400':
+          description: 只有被拒绝的预约才能重新申请
+
+  /approvals/pending:
+    get:
+      summary: 获取待我审批的预约
+      description: 获取当前用户需要审批的预约列表
+      tags:
+        - Approval
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  /approvals/reservations/{reservation_id}/approve:
+    post:
+      summary: 审批通过
+      tags:
+        - Approval
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+      responses:
+        '200':
+          description: 审批通过
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '400':
+          description: 您不是该实验室的负责人
+
+  /approvals/reservations/{reservation_id}/reject:
+    post:
+      summary: 审批拒绝
+      tags:
+        - Approval
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+      responses:
+        '200':
+          description: 已拒绝
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '400':
+          description: 操作失败
+
+  /approvals/reservations/{reservation_id}:
+    get:
+      summary: 获取预约的审批记录
+      tags:
+        - Approval
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+components:
+  schemas:
+    BaseResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 状态码
+        message:
+          type: string
+          description: 消息
+        data:
+          type: object
+          description: 数据
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 用户ID
+        name:
+          type: string
+          description: 用户名
+        phone:
+          type: string
+          description: 手机号
+        email:
+          type: string
+          description: 邮箱
+        role:
+          type: integer
+          enum: [0, 1, 2]
+          description: 角色 (0-超管, 1-管理员, 2-实验员)
+        avatar_url:
+          type: string
+          description: 头像URL
+        is_active:
+          type: integer
+          enum: [0, 1, 2]
+          description: 状态 (0-正常, 1-封禁, 2-注销)
+        last_login_at:
+          type: string
+          format: date-time
+          description: 最后登录时间
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+
+    UserCreate:
+      type: object
+      required:
+        - name
+        - phone
+        - password
+      properties:
+        name:
+          type: string
+          maxLength: 30
+          description: 用户名
+        phone:
+          type: string
+          description: 手机号（11位数字）
+          example: "13800138000"
+        password:
+          type: string
+          description: 密码（8-30位，需包含符号+字母+数字）
+          example: "User123!"
+        email:
+          type: string
+          description: 邮箱（可选）
+          example: "user@example.com"
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 30
+          description: 用户名
+        email:
+          type: string
+          description: 邮箱
+        avatar_url:
+          type: string
+          description: 头像URL
+        role:
+          type: integer
+          enum: [0, 1, 2]
+          description: 角色 (0-超管, 1-管理员, 2-实验员)
+        is_active:
+          type: integer
+          enum: [0, 1, 2]
+          description: 状态 (0-正常, 1-封禁, 2-注销)
+
+    LabResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 实验室ID
+        name:
+          type: string
+          description: 实验室名称
+        address:
+          type: string
+          description: 地址
+        capacity:
+          type: integer
+          description: 容纳人数
+        status:
+          type: integer
+          enum: [0, 1, 2]
+          description: 状态 (0-正常, 1-维护, 2-停用)
+        keyword:
+          type: string
+          description: 关键词
+        description:
+          type: string
+          description: 实验室说明
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    LabCreate:
+      type: object
+      required:
+        - name
+        - address
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: 实验室名称
+        address:
+          type: string
+          maxLength: 255
+          description: 地址
+        capacity:
+          type: integer
+          description: 容纳人数
+        keyword:
+          type: string
+          maxLength: 255
+          description: 关键词
+        description:
+          type: string
+          description: 实验室说明
+        manager_user_id:
+          type: integer
+          description: 负责人用户ID（可选）
+
+    LabUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: 实验室名称
+        address:
+          type: string
+          maxLength: 255
+          description: 地址
+        capacity:
+          type: integer
+          description: 容纳人数
+        status:
+          type: integer
+          enum: [0, 1, 2]
+          description: 状态 (0-正常, 1-维护, 2-停用)
+        keyword:
+          type: string
+          maxLength: 255
+          description: 关键词
+        description:
+          type: string
+          description: 实验室说明
+
+    InstrumentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 仪器ID
+        name:
+          type: string
+          description: 仪器名称
+        model:
+          type: string
+          description: 型号
+        manufacturer:
+          type: string
+          description: 厂商
+        supplier:
+          type: string
+          description: 供应商
+        purchase_date:
+          type: string
+          format: date-time
+          description: 采购日期
+        price:
+          type: number
+          description: 价格
+        status:
+          type: integer
+          enum: [0, 1, 2]
+          description: 状态 (0-正常, 1-维修, 2-停用)
+        lab_id:
+          type: integer
+          description: 所属实验室ID
+        remark:
+          type: string
+          description: 备注
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    InstrumentCreate:
+      type: object
+      required:
+        - name
+        - model
+        - manufacturer
+        - supplier
+        - price
+        - lab_id
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: 仪器名称
+        model:
+          type: string
+          maxLength: 100
+          description: 型号
+        manufacturer:
+          type: string
+          maxLength: 255
+          description: 厂商
+        supplier:
+          type: string
+          maxLength: 255
+          description: 供应商
+        purchase_date:
+          type: string
+          format: date-time
+          description: 采购日期
+        price:
+          type: number
+          description: 价格
+        lab_id:
+          type: integer
+          description: 所属实验室ID
+        remark:
+          type: string
+          maxLength: 255
+          description: 备注
+
+    InstrumentUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: 仪器名称
+        model:
+          type: string
+          maxLength: 100
+          description: 型号
+        manufacturer:
+          type: string
+          maxLength: 255
+          description: 厂商
+        supplier:
+          type: string
+          maxLength: 255
+          description: 供应商
+        purchase_date:
+          type: string
+          format: date-time
+          description: 采购日期
+        price:
+          type: number
+          description: 价格
+        status:
+          type: integer
+          enum: [0, 1, 2]
+          description: 状态 (0-正常, 1-维修, 2-停用)
+        lab_id:
+          type: integer
+          description: 所属实验室ID
+        remark:
+          type: string
+          maxLength: 255
+          description: 备注
+
+    ReservationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 预约ID
+        user_id:
+          type: integer
+          description: 申请人ID
+        lab_id:
+          type: integer
+          description: 实验室ID
+        start_time:
+          type: string
+          format: date-time
+          description: 开始时间
+        end_time:
+          type: string
+          format: date-time
+          description: 结束时间
+        purpose:
+          type: string
+          description: 使用目的
+        status:
+          type: integer
+          enum: [0, 1, 2, 3, 4]
+          description: 状态 (0-审批中, 1-通过, 2-拒绝, 3-已取消, 4-草稿)
+        user_name:
+          type: string
+          description: 申请人姓名
+        lab_name:
+          type: string
+          description: 实验室名称
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    ReservationCreate:
+      type: object
+      required:
+        - lab_id
+        - start_time
+        - end_time
+      properties:
+        lab_id:
+          type: integer
+          description: 实验室ID
+        start_time:
+          type: string
+          format: date-time
+          description: 开始时间
+        end_time:
+          type: string
+          format: date-time
+          description: 结束时间
+        purpose:
+          type: string
+          description: 使用目的
+
+    ReservationUpdate:
+      type: object
+      properties:
+        start_time:
+          type: string
+          format: date-time
+          description: 开始时间
+        end_time:
+          type: string
+          format: date-time
+          description: 结束时间
+        purpose:
+          type: string
+          description: 使用目的
+
+    ReservationReapply:
+      type: object
+      required:
+        - start_time
+        - end_time
+      properties:
+        start_time:
+          type: string
+          format: date-time
+          description: 开始时间
+        end_time:
+          type: string
+          format: date-time
+          description: 结束时间
+        purpose:
+          type: string
+          description: 使用目的
+
+    ApprovalRequest:
+      type: object
+      properties:
+        comment:
+          type: string
+          description: 审批意见
+
+    ApprovalRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 审批记录ID
+        reservation_id:
+          type: integer
+          description: 预约ID
+        approver_id:
+          type: integer
+          description: 审批人ID
+        approver_name:
+          type: string
+          nullable: true
+          description: 审批人姓名
+        status:
+          type: integer
+          enum: [0, 1]
+          description: 审批结果 (0-通过, 1-拒绝)
+        comment:
+          type: string
+          nullable: true
+          description: 审批意见
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: 审批时间
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+
+    LabManager:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 关联ID
+        user_id:
+          type: integer
+          description: 用户ID
+        name:
+          type: string
+          description: 用户姓名
+        phone:
+          type: string
+          description: 用户电话
+
+    PermissionResponse:
+      type: object
+      properties:
+        is_lab_manager:
+          type: boolean
+          description: 是否为实验室负责人
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

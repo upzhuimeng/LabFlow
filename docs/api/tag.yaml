@@ -1,0 +1,276 @@
+openapi: 3.0.3
+info:
+  title: Tag API
+  description: 标签管理接口
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Development Server
+
+paths:
+  /api/v1/tags:
+    get:
+      summary: 获取标签列表
+      description: 分页获取标签列表
+      tags:
+        - Tag
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: 页码
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: 每页数量
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              example:
+                code: 200
+                message: success
+                data:
+                  items:
+                    - id: 1
+                      name: 化学
+                      description: 化学实验室标签
+                      created_at: "2024-01-15T10:30:00Z"
+                  pagination:
+                    page: 1
+                    page_size: 20
+                    total: 10
+                    total_pages: 1
+
+    post:
+      summary: 创建标签
+      description: 创建新标签（管理员专用）
+      tags:
+        - Tag
+      security:
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 50
+                  description: 标签名称
+                  example: 化学
+                description:
+                  type: string
+                  maxLength: 255
+                  description: 描述
+      responses:
+        '201':
+          description: 创建成功
+        '400':
+          description: 标签名已存在
+        '403':
+          description: 权限不足
+
+  /api/v1/tags/{tag_id}:
+    get:
+      summary: 获取标签详情
+      description: 根据ID获取标签详情
+      tags:
+        - Tag
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 标签ID
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              example:
+                code: 200
+                message: success
+                data:
+                  id: 1
+                  name: 化学
+                  description: 化学实验室标签
+                  created_at: "2024-01-15T10:30:00Z"
+        '404':
+          description: 标签不存在
+
+    put:
+      summary: 更新标签
+      description: 更新标签信息（管理员专用）
+      tags:
+        - Tag
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 标签ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 50
+                  description: 标签名称
+                description:
+                  type: string
+                  maxLength: 255
+                  description: 描述
+      responses:
+        '200':
+          description: 更新成功
+        '404':
+          description: 标签不存在
+
+    delete:
+      summary: 删除标签
+      description: 删除标签（管理员专用）
+      tags:
+        - Tag
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 标签ID
+      responses:
+        '200':
+          description: 删除成功
+        '404':
+          description: 标签不存在
+
+  /api/v1/tags/{tag_id}/managers:
+    get:
+      summary: 获取标签负责人列表
+      description: 获取标签的所有负责人
+      tags:
+        - Tag
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 标签ID
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              example:
+                code: 200
+                message: success
+                data:
+                  - id: 1
+                    user_id: 5
+                    name: 李四
+                    phone: "13900139000"
+
+    post:
+      summary: 添加标签负责人
+      description: 为标签添加负责人（管理员专用）
+      tags:
+        - Tag
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 标签ID
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 用户ID
+      responses:
+        '200':
+          description: 添加成功
+        '400':
+          description: 该用户已是标签负责人
+        '404':
+          description: 标签或用户不存在
+
+    delete:
+      summary: 移除标签负责人
+      description: 移除标签负责人（管理员专用）
+      tags:
+        - Tag
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 标签ID
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 用户ID
+      responses:
+        '200':
+          description: 移除成功
+        '404':
+          description: 该用户不是标签负责人
+
+components:
+  schemas:
+    TagResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 标签ID
+        name:
+          type: string
+          description: 标签名称
+        description:
+          type: string
+          description: 描述
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
+
+tags:
+  - name: Tag
+    description: 标签管理接口
