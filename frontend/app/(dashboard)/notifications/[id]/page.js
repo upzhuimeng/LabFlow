@@ -114,6 +114,54 @@ function AgentRecommendationCard({ data }) {
   );
 }
 
+function ApprovalResultCard({ data }) {
+  const isApproved = data.approval_result === 'approved';
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h4 className="font-medium text-gray-800">{data.lab_name || '未知实验室'}</h4>
+          <p className="text-sm text-gray-500">
+            {data.start_time} ~ {data.end_time}
+          </p>
+        </div>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          isApproved ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+        }`}>
+          {isApproved ? '已通过' : '已拒绝'}
+        </span>
+      </div>
+      {data.purpose && (
+        <p className="text-sm text-gray-600 mb-2">
+          <span className="font-medium">使用目的：</span>
+          {data.purpose}
+        </p>
+      )}
+      <p className="text-sm text-gray-600 mb-2">
+        <span className="font-medium">审批人：</span>
+        {data.approver_name || '未知'}
+      </p>
+      {data.comment && (
+        <p className="text-sm text-gray-600 mb-2">
+          <span className="font-medium">审批意见：</span>
+          {data.comment}
+        </p>
+      )}
+      {!isApproved && (
+        <div className="mt-4">
+          <Link
+            href={`/reservation/my?reapply=${data.lab_id}`}
+            className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+          >
+            修改后重新申请
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function NotificationDetailPage() {
   const { id } = useParams();
   const toast = useToast();
@@ -281,6 +329,18 @@ export default function NotificationDetailPage() {
                 );
               }
               return <AgentRecommendationCard data={attachmentData} />;
+            })()
+          ) : notification.type === 1 && notification.attachment ? (
+            (() => {
+              let attachmentData;
+              try {
+                attachmentData = typeof notification.attachment === 'string' 
+                  ? JSON.parse(notification.attachment) 
+                  : notification.attachment;
+              } catch {
+                return null;
+              }
+              return <ApprovalResultCard data={attachmentData} />;
             })()
           ) : reservation ? (
             <div className="bg-white rounded-lg border border-gray-200 p-4">
