@@ -185,6 +185,7 @@ export default function StatisticsReportPage() {
   const [error, setError] = useState(null);
   const [aiSummary, setAiSummary] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const generatingTimerRef = useRef(null);
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -207,7 +208,7 @@ export default function StatisticsReportPage() {
   }, [fetchReport]);
 
   const handleAISummary = async () => {
-    if (!report) return;
+    if (!report || generating) return;
     setGenerating(true);
     try {
       await api.post('/agent/statistics/summarize', {
@@ -216,9 +217,15 @@ export default function StatisticsReportPage() {
       });
       toastRef.current.success(`${reportType === 'weekly' ? '周报' : '月报'}正在生成中，完成后将发送到您的信箱`);
       setAiSummary(null);
+
+      if (generatingTimerRef.current) {
+        clearTimeout(generatingTimerRef.current);
+      }
+      generatingTimerRef.current = setTimeout(() => {
+        setGenerating(false);
+      }, 30000);
     } catch (err) {
       toastRef.current.error(err.message || '生成总结失败');
-    } finally {
       setGenerating(false);
     }
   };
