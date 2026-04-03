@@ -24,7 +24,7 @@ export default function NotificationBell() {
 
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
+    const interval = setInterval(fetchUnreadCount, 10000);
     
     const handleNotificationRefresh = () => {
       fetchUnreadCount();

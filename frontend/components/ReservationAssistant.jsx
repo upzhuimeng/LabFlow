@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useToast } from './Toast';
@@ -8,31 +8,51 @@ import { useToast } from './Toast';
 export default function ReservationAssistant({ onSuggestionAccepted }) {
   const router = useRouter();
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const generatingTimerRef = useRef(null);
   const [result, setResult] = useState(null);
   const [showResult, setShowResult] = useState(false);
 
+  useEffect(() => {
+    return () => {
+      if (generatingTimerRef.current) {
+        clearTimeout(generatingTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!message.trim()) return;
+    if (!message.trim() || generating) return;
 
     setLoading(true);
     setResult(null);
     setShowResult(false);
+    setGenerating(true);
+
+    toastRef.current.success('正在分析您的需求，无需停留在此页面，结果将发送到您的消息通知');
+
+    if (generatingTimerRef.current) {
+      clearTimeout(generatingTimerRef.current);
+    }
+    generatingTimerRef.current = setTimeout(() => {
+      setGenerating(false);
+    }, 30000);
 
     try {
       const res = await api.post('/agent/reservation/assist', { message });
       const data = res.data;
 
       if (data?.success) {
-        toast.success(data?.message || '推荐结果已发送到您的消息通知');
         setMessage('');
       } else {
-        toast.info(data?.message || '未找到合适的实验室');
       }
     } catch (err) {
-      toast.error(err.message || '智能助手出错');
+      toastRef.current.error(err.message || '智能助手出错');
     } finally {
       setLoading(false);
     }
@@ -87,10 +107,10 @@ export default function ReservationAssistant({ onSuggestionAccepted }) {
         />
         <button
           type="submit"
-          disabled={loading || !message.trim()}
+          disabled={loading || generating || !message.trim()}
           className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {loading ? (
+          {generating ? (
             <>
               <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
