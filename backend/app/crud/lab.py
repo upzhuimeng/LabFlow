@@ -90,16 +90,20 @@ async def update_lab(
             select(LabUser).where(LabUser.lab_id == lab.id, LabUser.is_active == 0)
         )
         existing = result.scalars().all()
-        for lu in existing:
-            await db.delete(lu)
 
-        new_lab_user = LabUser(
-            lab_id=lab.id,
-            user_id=new_manager_id,
-            created_at=datetime.now(),
-            is_active=0,
-        )
-        db.add(new_lab_user)
+        if existing and len(existing) == 1 and existing[0].user_id == new_manager_id:
+            pass
+        else:
+            for lu in existing:
+                await db.delete(lu)
+
+            new_lab_user = LabUser(
+                lab_id=lab.id,
+                user_id=new_manager_id,
+                created_at=datetime.now(),
+                is_active=0,
+            )
+            db.add(new_lab_user)
 
     await db.commit()
     await db.refresh(lab)

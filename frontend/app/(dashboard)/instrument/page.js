@@ -83,7 +83,7 @@ export default function InstrumentPage() {
   const fetchLabs = async () => {
     try {
       const res = await api.get('/labs', { params: { page: 1, page_size: 100 } });
-      setLabs(res.data?.items || []);
+      setLabs((res.data?.items || []).filter(lab => lab.status !== 3));
     } catch (err) {
       console.error('获取实验室失败:', err);
     }
@@ -226,7 +226,8 @@ export default function InstrumentPage() {
           instruments.map((instrument) => (
             <div
               key={instrument.id}
-              className={`border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 ${
+              onClick={() => router.push(`/instrument/${instrument.id}`)}
+              className={`border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 cursor-pointer ${
                 instrument.status === STATUS.INSTRUMENT.DISABLED ? 'opacity-75' : ''
               }`}
             >
@@ -253,8 +254,8 @@ export default function InstrumentPage() {
                   {instrument.price ? `¥${instrument.price}` : '未填写'}
                 </p>
                 <p>
-                  <span className="font-medium">实验室ID：</span>
-                  {instrument.lab?.name || instrument.lab_id || '未填写'}
+                  <span className="font-medium">实验室：</span>
+                  {instrument.lab_name || instrument.lab_id || '未填写'}
                 </p>
                 {instrument.remark && (
                   <p>
@@ -270,13 +271,13 @@ export default function InstrumentPage() {
                 {isAdmin ? (
                   <>
                     <button
-                      onClick={() => handleEdit(instrument)}
+                      onClick={(e) => { e.stopPropagation(); handleEdit(instrument); }}
                       className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors"
                     >
                       编辑
                     </button>
                     <button
-                      onClick={() => setDeleteConfirm(instrument)}
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirm(instrument); }}
                       className="ml-2 px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
                     >
                       删除
@@ -284,7 +285,7 @@ export default function InstrumentPage() {
                   </>
                 ) : (
                   <button
-                    onClick={() => handleReserve(instrument)}
+                    onClick={(e) => { e.stopPropagation(); handleReserve(instrument); }}
                     className="px-3 py-1.5 text-sm border border-blue-200 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
                   >
                     预约

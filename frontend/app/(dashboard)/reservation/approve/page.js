@@ -9,7 +9,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { STATUS_TEXT } from '@/lib/constants';
 import api from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
 
 const STATUS_BADGE_CLASS = {
@@ -24,17 +24,17 @@ export default function ApproveReservationsPage() {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('pending');
+  const [filter, setFilter] = useState('all');
   const [selectedItem, setSelectedItem] = useState(null);
   const [actionType, setActionType] = useState(null);
+  const [comment, setComment] = useState('');
 
   const fetchPendingApprovals = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get('/approvals/pending');
+      const res = await api.get('/approvals/all');
       const data = res.data || {};
-      // API returns flat list directly in data
       setReservations(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || '获取数据失败');
@@ -49,8 +49,6 @@ export default function ApproveReservationsPage() {
 
   const filteredReservations = filter === 'all'
     ? reservations
-    : filter === 'pending'
-    ? reservations.filter(r => r.status === 0)
     : reservations.filter(r => r.status === parseInt(filter));
 
   const getStatusBadge = (status) => {
@@ -70,9 +68,10 @@ export default function ApproveReservationsPage() {
   const confirmApprove = async () => {
     if (!selectedItem) return;
     try {
-      await api.post(`/approvals/reservations/${selectedItem.id}/approve`);
+      await api.post(`/approvals/reservations/${selectedItem.id}/approve`, { comment });
       setSelectedItem(null);
       setActionType(null);
+      setComment('');
       fetchPendingApprovals();
     } catch (err) {
       toast.error(err.message || '操作失败');
@@ -87,9 +86,10 @@ export default function ApproveReservationsPage() {
   const confirmReject = async () => {
     if (!selectedItem) return;
     try {
-      await api.post(`/approvals/reservations/${selectedItem.id}/reject`);
+      await api.post(`/approvals/reservations/${selectedItem.id}/reject`, { comment });
       setSelectedItem(null);
       setActionType(null);
+      setComment('');
       fetchPendingApprovals();
     } catch (err) {
       toast.error(err.message || '操作失败');
@@ -126,7 +126,6 @@ export default function ApproveReservationsPage() {
           onChange={(e) => setFilter(e.target.value)}
           className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
         >
-          <option value="pending">待审批</option>
           <option value="all">全部</option>
           <option value="0">审批中</option>
           <option value="1">已通过</option>
@@ -138,7 +137,7 @@ export default function ApproveReservationsPage() {
       <div className="grid grid-cols-1 gap-4">
         {filteredReservations.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500">
-            暂无待审批预约
+            暂无审批记录
           </div>
         ) : (
           filteredReservations.map((reservation) => (
@@ -159,12 +158,18 @@ export default function ApproveReservationsPage() {
               <div className="space-y-1 text-sm text-gray-700">
                 <p>
                   <span className="font-medium">预约时间：</span>
-                  {formatDate(reservation.start_time)} ~ {formatDate(reservation.end_time)}
+                  {formatDateTime(reservation.start_time)} ~ {formatDateTime(reservation.end_time)}
                 </p>
                 <p>
                   <span className="font-medium">用途：</span>
                   {reservation.purpose || '-'}
                 </p>
+                {reservation.approval_comment && (
+                  <p>
+                    <span className="font-medium">审批意见：</span>
+                    {reservation.approval_comment}
+                  </p>
+                )}
               </div>
 
               <div className="border-t border-gray-300/70 my-4"></div>
@@ -205,17 +210,29 @@ export default function ApproveReservationsPage() {
               确认操作
             </h3>
             <p className="text-gray-500 text-sm text-center mb-6">
-              确定要{selectedItem.status === 2 ? '拒绝' : '通过'}预约「{selectedItem.lab_name}」吗？
+              确定要{actionType === 'reject' ? '拒绝' : '通过'}预约「{selectedItem.lab_name}」吗？
             </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                审批意见（可选）
+              </label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="请输入审批意见"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm resize-none"
+              />
+            </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setSelectedItem(null)}
+                onClick={() => { setSelectedItem(null); setActionType(null); setComment(''); }}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-sm"
               >
                 取消
               </button>
               <button
-                onClick={selectedItem.status === 2 ? confirmReject : confirmApprove}
+                onClick={actionType === 'reject' ? confirmReject : confirmApprove}
                 className={getButtonClass(selectedItem.status)}
               >
                 确认
