@@ -27,10 +27,11 @@ async def create_lab(
         raise HTTPException(status_code=403, detail="权限不足")
 
     lab = await lab_crud.create_lab(db, lab_data, lab_data.manager_user_id)
-    manager_id, manager_name = await lab_crud.get_lab_manager(db, lab.id)
+    manager_id, manager_name, manager_phone = await lab_crud.get_lab_manager(db, lab.id)
     response_data = LabResponse.model_validate(lab).model_dump()
     response_data["manager_user_id"] = manager_id
     response_data["manager_name"] = manager_name
+    response_data["manager_phone"] = manager_phone
     return BaseResponse(
         code=201,
         message="实验室创建成功",
@@ -54,9 +55,12 @@ async def list_labs(
     items = []
     for lab in labs:
         item = LabResponse.model_validate(lab).model_dump()
-        manager_id, manager_name = await lab_crud.get_lab_manager(db, lab.id)
+        manager_id, manager_name, manager_phone = await lab_crud.get_lab_manager(
+            db, lab.id
+        )
         item["manager_user_id"] = manager_id
         item["manager_name"] = manager_name
+        item["manager_phone"] = manager_phone
         items.append(item)
 
     return BaseResponse(
@@ -83,10 +87,11 @@ async def get_lab(
     if not lab:
         raise HTTPException(status_code=404, detail="实验室不存在")
 
-    manager_id, manager_name = await lab_crud.get_lab_manager(db, lab_id)
+    manager_id, manager_name, manager_phone = await lab_crud.get_lab_manager(db, lab_id)
     response_data = LabResponse.model_validate(lab).model_dump()
     response_data["manager_user_id"] = manager_id
     response_data["manager_name"] = manager_name
+    response_data["manager_phone"] = manager_phone
     return BaseResponse(data=response_data)
 
 
@@ -106,10 +111,11 @@ async def update_lab(
         raise HTTPException(status_code=404, detail="实验室不存在")
 
     updated = await lab_crud.update_lab(db, lab, lab_data)
-    manager_id, manager_name = await lab_crud.get_lab_manager(db, lab_id)
+    manager_id, manager_name, manager_phone = await lab_crud.get_lab_manager(db, lab_id)
     response_data = LabResponse.model_validate(updated).model_dump()
     response_data["manager_user_id"] = manager_id
     response_data["manager_name"] = manager_name
+    response_data["manager_phone"] = manager_phone
     return BaseResponse(message="实验室更新成功", data=response_data)
 
 

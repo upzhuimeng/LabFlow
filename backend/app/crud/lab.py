@@ -5,7 +5,7 @@
 from datetime import datetime
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Tuple, List
+from typing import Tuple, Sequence
 
 from app.models.lab import Lab
 from app.models.lab_user import LabUser
@@ -25,7 +25,7 @@ async def get_labs(
     limit: int = 100,
     status: int | None = None,
     keyword: str | None = None,
-) -> Tuple[List[Lab], int]:
+) -> Tuple[Sequence[Lab], int]:
     """获取实验室列表"""
     query = select(Lab)
 
@@ -37,7 +37,7 @@ async def get_labs(
 
     total_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(total_query)
-    total = total_result.scalar()
+    total = total_result.scalar() or 0
 
     query = query.order_by(Lab.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
@@ -114,14 +114,14 @@ async def delete_lab(db: AsyncSession, lab: Lab) -> None:
 
 async def get_lab_manager(
     db: AsyncSession, lab_id: int
-) -> tuple[int | None, str | None]:
+) -> tuple[int | None, str | None, str | None]:
     """获取实验室负责人信息"""
     result = await db.execute(
-        select(LabUser.user_id, User.name)
+        select(LabUser.user_id, User.name, User.phone)
         .join(User, User.id == LabUser.user_id)
         .where(LabUser.lab_id == lab_id, LabUser.is_active == 0)
     )
     row = result.first()
     if row:
-        return row[0], row[1]
-    return None, None
+        return row[0], row[1], row[2]
+    return None, None, None
