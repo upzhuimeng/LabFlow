@@ -4,7 +4,6 @@
 // Author: zhuimeng
 // Description: Dashboard 布局
 
-import './globals.css';
 import Sidebar from '@/components/Sidebar';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/components/Toast';

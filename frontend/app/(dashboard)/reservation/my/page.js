@@ -13,6 +13,7 @@ import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { SearchableSelect } from '@/components/ui';
 
 const STATUS_BADGE_CLASS = {
   0: 'bg-blue-100 text-blue-700',
@@ -212,6 +213,18 @@ function MyReservationsContent() {
     total: 0,
     totalPages: 0,
   });
+  const [showForm, setShowForm] = useState(false);
+  const [labs, setLabs] = useState([]);
+  const [selectedLabId, setSelectedLabId] = useState('');
+
+  const fetchLabs = useCallback(async () => {
+    try {
+      const res = await api.get('/labs', { params: { page: 1, page_size: 100 } });
+      setLabs(res.data?.items || []);
+    } catch (err) {
+      console.error('获取实验室失败:', err);
+    }
+  }, []);
 
   const fetchReservations = useCallback(async () => {
     setLoading(true);
@@ -236,19 +249,22 @@ function MyReservationsContent() {
   }, [pagination.page, pagination.pageSize, filter]);
 
   useEffect(() => {
-    if (!showReservationForm) {
+    if (!showReservationForm && !showForm) {
       fetchReservations();
     } else {
       setLoading(false);
     }
-  }, [showReservationForm, fetchReservations]);
+  }, [showReservationForm, showForm, fetchReservations]);
 
   const handleReservationSuccess = () => {
-    router.replace('/reservation/my');
+    setShowForm(false);
+    setSelectedLabId('');
+    fetchReservations();
   };
 
   const handleReservationCancel = () => {
-    router.replace('/reservation/my');
+    setShowForm(false);
+    setSelectedLabId('');
   };
 
   const handleCancel = async (reservationId) => {
@@ -284,17 +300,44 @@ function MyReservationsContent() {
 
   return (
     <div className="p-4 lg:p-6 min-h-[calc(100vh-80px)]">
-      <div className="mb-6">
+      <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">我的预约</h1>
+        <button
+          onClick={() => {
+            setSelectedLabId('');
+            fetchLabs();
+            setShowForm(true);
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+        >
+          新建预约
+        </button>
       </div>
 
-      {showReservationForm ? (
-        <ReservationForm
-          labId={labId}
-          instrumentId={instrumentId}
-          onSuccess={handleReservationSuccess}
-          onCancel={handleReservationCancel}
-        />
+      {showReservationForm || showForm ? (
+        <>
+          {showForm && !labId && (
+            <div className="mb-4">
+              <SearchableSelect
+                label="选择实验室"
+                name="lab_id"
+                value={selectedLabId}
+                onChange={(e) => setSelectedLabId(e.target.value)}
+                options={labs.map(lab => ({ value: lab.id, label: lab.name }))}
+                placeholder="请选择实验室"
+                searchPlaceholder="搜索实验室..."
+              />
+            </div>
+          )}
+          {(!showForm || labId || selectedLabId) && (
+            <ReservationForm
+              labId={labId || (selectedLabId ? selectedLabId : null)}
+              instrumentId={instrumentId}
+              onSuccess={handleReservationSuccess}
+              onCancel={handleReservationCancel}
+            />
+          )}
+        </>
       ) : (
         <>
           <div className="mb-4 flex items-center space-x-2">
