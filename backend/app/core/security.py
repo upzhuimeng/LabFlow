@@ -38,7 +38,9 @@ class JWTSettings:
             "JWT_SECRET_KEY", os.getenv("JWT_SECRET_KEY", "")
         )
         self.ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
-        self.EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "30"))
+        self.EXPIRE_MINUTES: int = int(
+            os.getenv("JWT_EXPIRE_MINUTES", "10080")
+        )  # 7 days
 
 
 jwt_settings = JWTSettings()

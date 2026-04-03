@@ -3,12 +3,12 @@
 # Description: 预约相关的数据模型
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-from typing import Optional
 from datetime import datetime
 
 
 class ReservationBase(BaseModel):
     """预约基础模型"""
+
     lab_id: int = Field(..., description="实验室ID")
     start_time: datetime = Field(..., description="开始时间")
     end_time: datetime = Field(..., description="结束时间")
@@ -25,11 +25,13 @@ class ReservationBase(BaseModel):
 
 class ReservationCreate(ReservationBase):
     """创建预约"""
+
     pass
 
 
 class ReservationUpdate(BaseModel):
     """更新预约（修改内容）"""
+
     start_time: datetime | None = None
     end_time: datetime | None = None
     purpose: str | None = None
@@ -44,6 +46,7 @@ class ReservationUpdate(BaseModel):
 
 class ReservationReapply(BaseModel):
     """重新申请（被拒绝后重新提交）"""
+
     start_time: datetime
     end_time: datetime
     purpose: str | None = None
@@ -58,12 +61,12 @@ class ReservationReapply(BaseModel):
 
 class ReservationResponse(ReservationBase):
     """预约响应模型"""
+
     id: int
     user_id: int
     user_name: str | None = None
     lab_name: str | None = None
-    status: int = Field(0, description="状态：0-审批中 1-通过 2-拒绝 3-已取消")
-    current_level: int = Field(1, description="当前审批阶段")
+    status: int = Field(0, description="状态：0-审批中 1-通过 2-拒绝 3-已取消 4-草稿")
     created_at: datetime
     updated_at: datetime | None = None
 

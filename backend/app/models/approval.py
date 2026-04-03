@@ -25,10 +25,6 @@ class Approval(Base):
         ForeignKey("user.id"), nullable=False, index=True, comment="审批人ID"
     )
 
-    level: Mapped[int] = mapped_column(
-        SMALLINT, nullable=False, comment="审批等级(1/2)"
-    )
-
     status: Mapped[int] = mapped_column(
         SMALLINT, nullable=False, server_default="0", comment="状态(0-通过 1-拒绝)"
     )

@@ -10,9 +10,11 @@ import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { STATUS_TEXT } from '@/lib/constants';
 import api from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { SearchableSelect } from '@/components/ui';
+import ReservationAssistant from '@/components/ReservationAssistant';
 
 const STATUS_BADGE_CLASS = {
   0: 'bg-blue-100 text-blue-700',
@@ -21,7 +23,7 @@ const STATUS_BADGE_CLASS = {
   3: 'bg-gray-100 text-gray-700',
 };
 
-function ReservationForm({ labId, instrumentId, onSuccess, onCancel }) {
+function ReservationForm({ labId, instrumentId, prefilledStartTime, prefilledEndTime, onSuccess, onCancel }) {
   const toast = useToast();
   const [labInfo, setLabInfo] = useState(null);
   const [instrumentInfo, setInstrumentInfo] = useState(null);
@@ -32,6 +34,21 @@ function ReservationForm({ labId, instrumentId, onSuccess, onCancel }) {
     purpose: '',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (prefilledStartTime) {
+      const formatted = prefilledStartTime.includes('T')
+        ? prefilledStartTime.slice(0, 16)
+        : prefilledStartTime.replace(' ', 'T').slice(0, 16);
+      setForm(prev => ({ ...prev, start_time: formatted }));
+    }
+    if (prefilledEndTime) {
+      const formatted = prefilledEndTime.includes('T')
+        ? prefilledEndTime.slice(0, 16)
+        : prefilledEndTime.replace(' ', 'T').slice(0, 16);
+      setForm(prev => ({ ...prev, end_time: formatted }));
+    }
+  }, [prefilledStartTime, prefilledEndTime]);
 
   useEffect(() => {
     const fetchInfo = async () => {
@@ -77,8 +94,7 @@ function ReservationForm({ labId, instrumentId, onSuccess, onCancel }) {
     setSubmitting(true);
     try {
       const formatdatetimeForApi = (datetimeStr) => {
-        const date = new Date(datetimeStr);
-        return date.toISOString();
+        return datetimeStr.replace('T', ' ') + ':00';
       };
       const payload = {
         lab_id: labId ? parseInt(labId) : null,
@@ -200,6 +216,8 @@ function MyReservationsContent() {
   
   const labId = searchParams.get('lab_id');
   const instrumentId = searchParams.get('instrument_id');
+  const prefilledStartTime = searchParams.get('start_time');
+  const prefilledEndTime = searchParams.get('end_time');
   const showReservationForm = labId || instrumentId;
 
   const [reservations, setReservations] = useState([]);
@@ -212,6 +230,18 @@ function MyReservationsContent() {
     total: 0,
     totalPages: 0,
   });
+  const [showForm, setShowForm] = useState(false);
+  const [labs, setLabs] = useState([]);
+  const [selectedLabId, setSelectedLabId] = useState('');
+
+  const fetchLabs = useCallback(async () => {
+    try {
+      const res = await api.get('/labs', { params: { page: 1, page_size: 100, status: 0 } });
+      setLabs(res.data?.items || []);
+    } catch (err) {
+      console.error('获取实验室失败:', err);
+    }
+  }, []);
 
   const fetchReservations = useCallback(async () => {
     setLoading(true);
@@ -236,19 +266,20 @@ function MyReservationsContent() {
   }, [pagination.page, pagination.pageSize, filter]);
 
   useEffect(() => {
-    if (!showReservationForm) {
+    if (!showReservationForm && !showForm) {
       fetchReservations();
     } else {
       setLoading(false);
     }
-  }, [showReservationForm, fetchReservations]);
+  }, [showReservationForm, showForm, fetchReservations]);
 
   const handleReservationSuccess = () => {
-    router.replace('/reservation/my');
+    window.location.href = '/reservation/my';
   };
 
   const handleReservationCancel = () => {
-    router.replace('/reservation/my');
+    setShowForm(false);
+    setSelectedLabId('');
   };
 
   const handleCancel = async (reservationId) => {
@@ -274,16 +305,6 @@ function MyReservationsContent() {
     );
   };
 
-  const getApprovalLevelText = (currentLevel) => {
-    switch (currentLevel) {
-      case 0: return '未申请';
-      case 1: return '一级审批中';
-      case 2: return '二级审批中';
-      case 3: return '已通过';
-      default: return '未知';
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-80px)]">
@@ -294,17 +315,63 @@ function MyReservationsContent() {
 
   return (
     <div className="p-4 lg:p-6 min-h-[calc(100vh-80px)]">
-      <div className="mb-6">
+      <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">我的预约</h1>
+        <button
+          onClick={() => {
+            setSelectedLabId('');
+            fetchLabs();
+            setShowForm(true);
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+        >
+          新建预约
+        </button>
       </div>
 
-      {showReservationForm ? (
-        <ReservationForm
-          labId={labId}
-          instrumentId={instrumentId}
-          onSuccess={handleReservationSuccess}
-          onCancel={handleReservationCancel}
-        />
+      {!showReservationForm && !showForm && (
+        <div className="mb-6">
+          <ReservationAssistant />
+        </div>
+      )}
+
+      {showReservationForm || showForm ? (
+        <>
+          <div className="mb-4 flex items-center">
+          <button
+            onClick={() => {
+              window.location.href = '/reservation/my';
+            }}
+            className="flex items-center text-gray-600 hover:text-gray-800 mr-4"
+          >
+              <span className="mr-1">←</span>
+              <span>返回</span>
+            </button>
+          </div>
+          {showForm && !labId && (
+            <div className="mb-4">
+              <SearchableSelect
+                label="选择实验室"
+                name="lab_id"
+                value={selectedLabId}
+                onChange={(e) => setSelectedLabId(e.target.value)}
+                options={labs.map(lab => ({ value: lab.id, label: lab.name }))}
+                placeholder="请选择实验室"
+                searchPlaceholder="搜索实验室..."
+              />
+            </div>
+          )}
+          {(!showForm || labId || selectedLabId) && (
+            <ReservationForm
+              labId={labId || (selectedLabId ? selectedLabId : null)}
+              instrumentId={instrumentId}
+              prefilledStartTime={prefilledStartTime}
+              prefilledEndTime={prefilledEndTime}
+              onSuccess={handleReservationSuccess}
+              onCancel={handleReservationCancel}
+            />
+          )}
+        </>
       ) : (
         <>
           <div className="mb-4 flex items-center space-x-2">
@@ -335,7 +402,7 @@ function MyReservationsContent() {
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h2 className="text-lg font-semibold text-blue-600">{reservation.instrument_name}</h2>
+                      <h2 className="text-lg font-semibold text-blue-600">{reservation.lab_name}</h2>
                       <p className="text-sm text-gray-500 mt-1">
                         预约人：{reservation.user_name}
                       </p>
@@ -346,16 +413,18 @@ function MyReservationsContent() {
                   <div className="space-y-1 text-sm text-gray-700">
                     <p>
                       <span className="font-medium">预约时间：</span>
-                      {formatDate(reservation.start_time)} ~ {formatDate(reservation.end_time)}
+                      {formatDateTime(reservation.start_time)} ~ {formatDateTime(reservation.end_time)}
                     </p>
                     <p>
                       <span className="font-medium">用途：</span>
                       {reservation.purpose || '-'}
                     </p>
-                    <p>
-                      <span className="font-medium">审批进度：</span>
-                      {getApprovalLevelText(reservation.current_level)}
-                    </p>
+                    {reservation.approval_comment && (
+                      <p>
+                        <span className="font-medium">审批意见：</span>
+                        {reservation.approval_comment}
+                      </p>
+                    )}
                   </div>
 
                   <div className="border-t border-gray-300/70 my-4"></div>

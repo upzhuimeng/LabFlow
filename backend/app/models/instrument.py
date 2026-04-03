@@ -4,11 +4,20 @@
 # Author: zhuimeng
 # Description: Instrument ORM
 
-from sqlalchemy import Integer, SmallInteger, String, Numeric, DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    Integer,
+    SmallInteger,
+    String,
+    Numeric,
+    DateTime,
+    ForeignKey,
+    func,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from decimal import Decimal
 from datetime import datetime
 from app.db.base import Base
+from app.models.lab import Lab
 
 
 class Instrument(Base):
@@ -48,7 +57,7 @@ class Instrument(Base):
     remark: Mapped[str | None] = mapped_column(String(255), comment="备注")
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, comment="创建时间"
+        DateTime, nullable=False, server_default=func.now(), comment="创建时间"
     )
 
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, comment="更新时间")

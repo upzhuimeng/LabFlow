@@ -26,7 +26,7 @@ async function request(url, options = {}) {
     ? '?' + new URLSearchParams(params).toString()
     : '';
   
-  const fullUrl = `${BASE_URL}${url}${url.endsWith('/') ? '' : '/'}${queryString}`;
+  const fullUrl = `${BASE_URL}${url}${queryString}`;
   
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
@@ -53,9 +53,12 @@ async function request(url, options = {}) {
     if (!response.ok) {
       if (response.status === 401) {
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user');
-          window.dispatchEvent(new CustomEvent('auth:expired'));
+          const hasToken = localStorage.getItem('access_token');
+          if (hasToken) {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            window.dispatchEvent(new CustomEvent('auth:expired'));
+          }
         }
       }
       throw new ApiError(

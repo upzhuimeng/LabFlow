@@ -3,6 +3,7 @@
 # Description: 仪器路由
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
@@ -16,6 +17,7 @@ from app.schemas.instrument import (
 from app.schemas.base import BaseResponse
 from app.crud import instrument as instrument_crud
 from app.crud import lab as lab_crud
+from app.models.lab import Lab
 
 
 router = APIRouter(prefix="/api/v1/instruments", tags=["仪器管理"])
@@ -47,7 +49,7 @@ async def create_instrument(
 async def list_instruments(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    status: Optional[int] = Query(None, ge=0, le=2),
+    status: Optional[int] = Query(None, ge=0, le=3),
     lab_id: Optional[int] = Query(None),
     keyword: Optional[str] = Query(None, max_length=100),
     db: AsyncSession = Depends(get_db),
@@ -59,9 +61,13 @@ async def list_instruments(
         db, skip, page_size, status, lab_id, keyword
     )
 
-    items = [
-        InstrumentResponse.model_validate(inst).model_dump() for inst in instruments
-    ]
+    items = []
+    for inst in instruments:
+        item = InstrumentResponse.model_validate(inst).model_dump()
+        lab_result = await db.execute(select(Lab.name).where(Lab.id == inst.lab_id))
+        lab_name = lab_result.scalar_one_or_none()
+        item["lab_name"] = lab_name
+        items.append(item)
 
     return BaseResponse(
         data={
@@ -87,7 +93,11 @@ async def get_instrument(
     if not instrument:
         raise HTTPException(status_code=404, detail="仪器不存在")
 
-    return BaseResponse(data=InstrumentResponse.model_validate(instrument).model_dump())
+    response_data = InstrumentResponse.model_validate(instrument).model_dump()
+    lab_result = await db.execute(select(Lab.name).where(Lab.id == instrument.lab_id))
+    lab_name = lab_result.scalar_one_or_none()
+    response_data["lab_name"] = lab_name
+    return BaseResponse(data=response_data)
 
 
 @router.put("/{instrument_id}", response_model=BaseResponse)

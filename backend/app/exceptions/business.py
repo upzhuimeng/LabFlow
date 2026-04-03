@@ -13,7 +13,7 @@ class BusinessError(Exception):
         super().__init__(self.message)
 
 
-class RegisterError(BusinessError):
+class UserValidationError(BusinessError):
     code: int = 400
 
 

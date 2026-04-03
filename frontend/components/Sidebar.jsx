@@ -11,12 +11,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { ROLE_TEXT } from '@/lib/constants';
+import NotificationBell from './NotificationBell';
 
 /**
  * 导航菜单配置
  * - public: 所有登录用户可见
  * - admin: 管理员可见（设备管理、实验室管理、用户管理）
- * - approval: 审批功能可见（实验室管理员、标签管理员、管理员）
+ * - approval: 审批功能可见（实验室管理员、管理员）
  */
 const NAV_ITEMS = {
   public: [
@@ -80,7 +81,7 @@ function getAvatarText(user) {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user, isAdmin, isLabManager, isTagManager, logout } = useAuth();
+  const { user, isAdmin, isLabManager, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (href) => {
@@ -96,7 +97,7 @@ export default function Sidebar() {
     return pathname.startsWith(href);
   };
 
-  const showAdminMenu = isAdmin || isLabManager || isTagManager;
+  const showAdminMenu = isAdmin || isLabManager;
 
   return (
     <>
@@ -218,8 +219,8 @@ export default function Sidebar() {
             </nav>
           )}
 
-          {/* 审批菜单（实验室/标签管理员可见） */}
-          {(isLabManager || isTagManager) && !isAdmin && (
+          {/* 审批菜单（实验室管理员可见） */}
+          {isLabManager && (
             <nav className="space-y-1 mb-6">
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
                 审批
@@ -260,6 +261,8 @@ export default function Sidebar() {
                 </p>
               </div>
             </div>
+            {/* 通知铃铛 */}
+            <NotificationBell />
             {/* 退出登录按钮 */}
             <button
               onClick={logout}

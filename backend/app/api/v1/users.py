@@ -10,8 +10,7 @@ from typing import Optional
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
 from app.models.lab_user import LabUser
-from app.models.tag_user import TagUser
-from app.schemas.user import UserUpdate, UserResponse
+from app.schemas.user import UserUpdate, UserResponse, UserCreate
 from app.schemas.base import BaseResponse
 from app.crud import user as user_crud
 
@@ -30,7 +29,7 @@ async def get_current_user_permissions(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """获取当前用户权限（是否为实验室/标签管理员）"""
+    """获取当前用户权限（是否为实验室管理员）"""
     lab_result = await db.execute(
         select(LabUser).where(
             LabUser.user_id == current_user.id, LabUser.is_active == 0
@@ -38,15 +37,9 @@ async def get_current_user_permissions(
     )
     lab_manager = lab_result.scalars().first() is not None
 
-    tag_result = await db.execute(
-        select(TagUser).where(TagUser.user_id == current_user.id)
-    )
-    tag_manager = tag_result.scalars().first() is not None
-
     return BaseResponse(
         data={
             "is_lab_manager": lab_manager,
-            "is_tag_manager": tag_manager,
         }
     )
 
@@ -85,6 +78,29 @@ async def list_users(
     )
 
 
+@router.post("/", response_model=BaseResponse, status_code=201)
+async def create_user(
+    user_data: UserCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """创建用户（管理员）"""
+    if current_user.role not in [0, 1]:
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    if user_data.role == 0:
+        raise HTTPException(status_code=400, detail="无法创建超级管理员用户")
+
+    existing = await user_crud.get_user_by_phone(db, user_data.phone)
+    if existing:
+        raise HTTPException(status_code=400, detail="该手机号已注册")
+
+    user = await user_crud.create_user(db, user_data)
+    return BaseResponse(
+        message="用户创建成功", data=UserResponse.model_validate(user).model_dump()
+    )
+
+
 @router.get("/{user_id}", response_model=BaseResponse)
 async def get_user(
     user_id: int,
@@ -112,6 +128,9 @@ async def update_user(
     """更新用户（管理员）"""
     if current_user.role not in [0, 1]:
         raise HTTPException(status_code=403, detail="权限不足")
+
+    if user_data.role is not None and user_data.role == 0:
+        raise HTTPException(status_code=400, detail="无法将用户设置为超级管理员")
 
     user = await user_crud.get_user_by_id(db, user_id)
     if not user:

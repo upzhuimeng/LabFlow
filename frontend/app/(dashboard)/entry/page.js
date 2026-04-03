@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { SearchableSelect } from '@/components/ui';
 
 const EMPTY_INSTRUMENT_FORM = {
   name: '',
@@ -27,8 +28,7 @@ const EMPTY_LAB_FORM = {
   address: '',
   capacity: '',
   status: 0,
-  manager: '',
-  phone: '',
+  manager_user_id: '',
   description: '',
 };
 
@@ -36,22 +36,34 @@ export default function EntryPage() {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('instrument');
   const [labs, setLabs] = useState([]);
+  const [users, setUsers] = useState([]);
   const [successMessage, setSuccessMessage] = useState('');
   const [instrumentForm, setInstrumentForm] = useState(EMPTY_INSTRUMENT_FORM);
   const [labForm, setLabForm] = useState(EMPTY_LAB_FORM);
+  const [labFormErrors, setLabFormErrors] = useState({});
 
   const fetchLabs = useCallback(async () => {
     try {
-      const res = await api.get('/labs', { params: { page: 1, page_size: 100 } });
+      const res = await api.get('/labs', { params: { page: 1, page_size: 100, status: 0 } });
       setLabs(res.data?.items || []);
     } catch (err) {
       console.error('获取实验室失败:', err);
     }
   }, []);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await api.get('/users', { params: { page: 1, page_size: 100 } });
+      setUsers(res.data?.items || []);
+    } catch (err) {
+      console.error('获取用户失败:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchLabs();
-  }, [fetchLabs]);
+    fetchUsers();
+  }, [fetchLabs, fetchUsers]);
 
   const showSuccess = (message) => {
     setSuccessMessage(message);
@@ -60,6 +72,34 @@ export default function EntryPage() {
 
   const handleInstrumentSubmit = async (e) => {
     e.preventDefault();
+    if (!instrumentForm.name?.trim()) {
+      toast.error('请输入仪器名称');
+      return;
+    }
+    if (!instrumentForm.lab_id) {
+      toast.error('请选择实验室');
+      return;
+    }
+    if (!instrumentForm.model?.trim()) {
+      toast.error('请输入仪器型号');
+      return;
+    }
+    if (!instrumentForm.manufacturer?.trim()) {
+      toast.error('请输入生产厂商');
+      return;
+    }
+    if (!instrumentForm.supplier?.trim()) {
+      toast.error('请输入供应商');
+      return;
+    }
+    if (!instrumentForm.purchase_date) {
+      toast.error('请选择购买日期');
+      return;
+    }
+    if (!instrumentForm.price || parseFloat(instrumentForm.price) <= 0) {
+      toast.error('请输入有效的价格');
+      return;
+    }
     try {
       const submitData = {
         ...instrumentForm,
@@ -76,10 +116,33 @@ export default function EntryPage() {
 
   const handleLabSubmit = async (e) => {
     e.preventDefault();
+    if (!labForm.name?.trim()) {
+      toast.error('请输入实验室名称');
+      return;
+    }
+    if (!labForm.address?.trim()) {
+      toast.error('请输入实验室地址');
+      return;
+    }
+    if (!labForm.capacity || parseInt(labForm.capacity) < 1) {
+      toast.error('请输入有效的容纳人数');
+      return;
+    }
+    const errors = {};
+    if (!labForm.manager_user_id) {
+      errors.manager_user_id = '请选择负责人';
+    }
+    if (Object.keys(errors).length > 0) {
+      setLabFormErrors(errors);
+      return;
+    }
+    setLabFormErrors({});
     try {
+      const { manager_user_id, ...rest } = labForm;
       const submitData = {
-        ...labForm,
+        ...rest,
         capacity: labForm.capacity ? parseInt(labForm.capacity) : null,
+        manager_user_id: manager_user_id ? parseInt(manager_user_id) : null,
       };
       await api.post('/labs', submitData);
       toast.success('实验室添加成功！');
@@ -97,7 +160,14 @@ export default function EntryPage() {
 
   const handleLabChange = (e) => {
     const { name, value } = e.target;
-    setLabForm(prev => ({ ...prev, [name]: value }));
+    if (name === 'manager_user_id') {
+      setLabForm(prev => ({ ...prev, [name]: value ? parseInt(value) : '' }));
+      if (value) {
+        setLabFormErrors(prev => ({ ...prev, manager_user_id: undefined }));
+      }
+    } else {
+      setLabForm(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const tabs = [
@@ -155,53 +225,68 @@ export default function EntryPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">型号</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    型号 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="model"
                     value={instrumentForm.model}
                     onChange={handleInstrumentChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">厂商</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    生产厂商 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="manufacturer"
                     value={instrumentForm.manufacturer}
                     onChange={handleInstrumentChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">供应商</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    供应商 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="supplier"
                     value={instrumentForm.supplier}
                     onChange={handleInstrumentChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">购买日期</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    购买日期 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="date"
                     name="purchase_date"
                     value={instrumentForm.purchase_date}
                     onChange={handleInstrumentChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">价格</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    价格 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     name="price"
                     value={instrumentForm.price}
                     onChange={handleInstrumentChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
@@ -218,20 +303,16 @@ export default function EntryPage() {
                     <option value={2}>停用</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">实验室</label>
-                  <select
-                    name="lab_id"
-                    value={instrumentForm.lab_id}
-                    onChange={handleInstrumentChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
-                  >
-                    <option value="">请选择</option>
-                    {labs.map(lab => (
-                      <option key={lab.id} value={lab.id}>{lab.name}</option>
-                    ))}
-                  </select>
-                </div>
+                <SearchableSelect
+                  label="实验室"
+                  name="lab_id"
+                  value={instrumentForm.lab_id || ''}
+                  onChange={handleInstrumentChange}
+                  options={labs.map(lab => ({ value: lab.id, label: lab.name }))}
+                  placeholder="请选择实验室"
+                  searchPlaceholder="搜索实验室..."
+                  required
+                />
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">备注</label>
                   <textarea
@@ -321,23 +402,19 @@ export default function EntryPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">负责人</label>
-                  <input
-                    type="text"
-                    name="manager"
-                    value={labForm.manager}
+                  <SearchableSelect
+                    label="负责人"
+                    name="manager_user_id"
+                    value={labForm.manager_user_id || ''}
                     onChange={handleLabChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">联系电话</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={labForm.phone}
-                    onChange={handleLabChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
+                    options={users.filter(u => u.role === 1 || u.role === 2).map(user => ({
+                      value: user.id,
+                      label: `${user.name} (${user.role === 1 ? '管理员' : '实验员'})`
+                    }))}
+                    placeholder="请选择负责人"
+                    searchPlaceholder="搜索用户..."
+                    required
+                    error={labFormErrors.manager_user_id}
                   />
                 </div>
                 <div className="md:col-span-2">

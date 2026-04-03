@@ -16,6 +16,7 @@ const STATUS_BADGE_CLASS = {
   0: 'bg-green-100 text-green-700',
   1: 'bg-yellow-100 text-yellow-700',
   2: 'bg-gray-100 text-gray-700',
+  3: 'bg-red-100 text-red-700',
 };
 
 export default function InstrumentDetailPage() {
@@ -91,7 +92,7 @@ export default function InstrumentDetailPage() {
           <div><span className="font-medium">供应商：</span>{instrument.supplier || '未填写'}</div>
           <div><span className="font-medium">购买日期：</span>{instrument.purchase_date || '未填写'}</div>
           <div><span className="font-medium">价格：</span>{instrument.price ? `¥${instrument.price}` : '未填写'}</div>
-          <div><span className="font-medium">实验室ID：</span>{instrument.lab_id || '未填写'}</div>
+          <div><span className="font-medium">所属实验室：</span>{instrument.lab_name || instrument.lab_id || '未填写'}</div>
           <div><span className="font-medium">备注：</span>{instrument.remark || '无'}</div>
           <div className="md:col-span-2 flex items-center">
             <span className="font-medium mr-2">状态：</span>
@@ -100,7 +101,15 @@ export default function InstrumentDetailPage() {
         </div>
         <div className="border-t border-gray-300/50 my-6"></div>
         <div className="flex gap-3 mt-6 justify-end">
-          {isAdmin && (
+          {!isAdmin && instrument.status === 0 && (
+            <Link
+              href={`/reservation/my?instrument_id=${instrument.id}&lab_id=${instrument.lab_id}`}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              预约
+            </Link>
+          )}
+          {isAdmin && instrument.status !== 3 && (
             <button
               onClick={() => {
                 setSelectedStatus(instrument.status);

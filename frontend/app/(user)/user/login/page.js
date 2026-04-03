@@ -7,14 +7,13 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
 export default function LoginPage() {
     const router = useRouter();
     const [form, setForm] = useState({
-        phone: '',
+        identifier: '',
         password: '',
     });
     const [showPassword, setShowPassword] = useState(false);
@@ -31,29 +30,42 @@ export default function LoginPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        
+        if (!form.identifier || !form.password) {
+            setLocalError('请输入手机号/邮箱和密码');
+            return;
+        }
+        
         setLocalError('');
         setLoading(true);
 
         try {
-            const loginData = await api.post('/auth/login', {
-                phone: form.phone,
+            const result = await api.post('/auth/login', {
+                identifier: form.identifier,
                 password: form.password,
             });
 
-            if (loginData.code === 200) {
-                localStorage.setItem('access_token', loginData.data.access_token);
+            if (result?.code === 200 && result?.data?.access_token) {
+                localStorage.setItem('access_token', result.data.access_token);
                 
-                const userData = await api.get('/users/me');
-                if (userData.code === 200) {
-                    localStorage.setItem('user', JSON.stringify(userData.data));
+                try {
+                    const userData = await api.get('/users/me');
+                    if (userData?.code === 200) {
+                        localStorage.setItem('user', JSON.stringify(userData.data));
+                    }
+                } catch (userErr) {
+                    console.error('Failed to fetch user data:', userErr);
                 }
                 
                 router.push('/dashboard');
             } else {
-                setLocalError(loginData.message || '登录失败');
+                setLocalError(result?.message || '登录失败');
             }
         } catch (err) {
-            setLocalError(err.message || '登录失败，请检查手机号和密码');
+            console.error('Login error:', err);
+            const errorMessage = err?.message || err?.data?.message || '登录失败，请检查手机号/邮箱和密码';
+            setLocalError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -76,12 +88,12 @@ export default function LoginPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">手机号</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">手机号/邮箱</label>
                             <input
                                 type="text"
-                                name="phone"
-                                placeholder="请输入手机号"
-                                value={form.phone}
+                                name="identifier"
+                                placeholder="请输入手机号或邮箱"
+                                value={form.identifier}
                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-800 placeholder-gray-400"
                                 onChange={handleChange}
                             />
@@ -131,14 +143,7 @@ export default function LoginPage() {
                         </button>
                     </form>
 
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-500">
-                            还没有账号？
-                            <Link href="/user/register" className="text-blue-600 hover:text-blue-700 font-medium ml-1">
-                                立即注册
-                            </Link>
-                        </p>
-                    </div>
+
                 </div>
 
                 <div className="mt-6 text-center">

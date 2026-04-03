@@ -9,13 +9,16 @@ from datetime import datetime, timezone
 from app.crud import reservation as reservation_crud
 from app.crud import lab as lab_crud
 from app.crud import user as user_crud
-from app.schemas.reservation import ReservationCreate, ReservationUpdate, ReservationReapply
+from app.crud import approval as approval_crud
+from app.schemas.reservation import (
+    ReservationCreate,
+    ReservationUpdate,
+    ReservationReapply,
+)
 
 
 async def create_reservation(
-        db: AsyncSession,
-        reservation_data: ReservationCreate,
-        user_id: int
+    db: AsyncSession, reservation_data: ReservationCreate, user_id: int
 ) -> Dict[str, Any]:
     """创建预约"""
     # 1. 检查实验室是否存在
@@ -31,21 +34,28 @@ async def create_reservation(
     if reservation_data.start_time >= reservation_data.end_time:
         raise ValueError("开始时间必须早于结束时间")
 
-    if reservation_data.start_time < datetime.now(timezone.utc):
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    if reservation_data.start_time < now_utc:
         raise ValueError("不能预约过去的时间")
 
     # 4. 检查时间冲突
-    has_conflict = await reservation_crud.check_time_conflict(
+    conflicts = await reservation_crud.check_time_conflict(
         db,
         reservation_data.lab_id,
         reservation_data.start_time,
-        reservation_data.end_time
+        reservation_data.end_time,
     )
-    if has_conflict:
-        raise ValueError("该时间段已被预约")
+    if conflicts:
+        conflict_times = ", ".join(
+            f"{c.start_time.strftime('%m-%d %H:%M')}~{c.end_time.strftime('%H:%M')}"
+            for c in conflicts
+        )
+        raise ValueError(f"该时间段已被预约：{conflict_times}")
 
     # 5. 创建预约
-    reservation = await reservation_crud.create_reservation(db, reservation_data, user_id)
+    reservation = await reservation_crud.create_reservation(
+        db, reservation_data, user_id
+    )
 
     return {
         "id": reservation.id,
@@ -55,16 +65,16 @@ async def create_reservation(
         "end_time": reservation.end_time,
         "purpose": reservation.purpose,
         "status": reservation.status,
-        "created_at": reservation.created_at
+        "created_at": reservation.created_at,
     }
 
 
 async def get_user_reservations(
-        db: AsyncSession,
-        user_id: int,
-        page: int = 1,
-        page_size: int = 20,
-        status: int | None = None
+    db: AsyncSession,
+    user_id: int,
+    page: int = 1,
+    page_size: int = 20,
+    status: int | None = None,
 ) -> Dict[str, Any]:
     """获取用户的预约列表"""
     skip = (page - 1) * page_size
@@ -75,16 +85,24 @@ async def get_user_reservations(
     items = []
     for r in reservations:
         lab = await lab_crud.get_lab_by_id(db, r.lab_id)
-        items.append({
-            "id": r.id,
-            "lab_id": r.lab_id,
-            "lab_name": lab.name if lab else None,
-            "start_time": r.start_time,
-            "end_time": r.end_time,
-            "purpose": r.purpose,
-            "status": r.status,
-            "created_at": r.created_at
-        })
+        user = await user_crud.get_user_by_id(db, r.user_id)
+        approvals = await approval_crud.get_approvals_by_reservation(db, r.id)
+        approval_comment = approvals[0].comment if approvals else None
+        items.append(
+            {
+                "id": r.id,
+                "user_id": r.user_id,
+                "user_name": user.name if user else None,
+                "lab_id": r.lab_id,
+                "lab_name": lab.name if lab else None,
+                "start_time": r.start_time,
+                "end_time": r.end_time,
+                "purpose": r.purpose,
+                "status": r.status,
+                "created_at": r.created_at,
+                "approval_comment": approval_comment,
+            }
+        )
 
     return {
         "items": items,
@@ -92,15 +110,13 @@ async def get_user_reservations(
             "page": page,
             "page_size": page_size,
             "total": total,
-            "total_pages": (total + page_size - 1) // page_size
-        }
+            "total_pages": (total + page_size - 1) // page_size,
+        },
     }
 
 
 async def get_reservation_detail(
-        db: AsyncSession,
-        reservation_id: int,
-        current_user_id: int
+    db: AsyncSession, reservation_id: int, current_user_id: int
 ) -> Dict[str, Any]:
     """获取预约详情（本人或管理员）"""
     reservation = await reservation_crud.get_reservation_by_id(db, reservation_id)
@@ -128,17 +144,16 @@ async def get_reservation_detail(
         "end_time": reservation.end_time,
         "purpose": reservation.purpose,
         "status": reservation.status,
-        "current_level": reservation.current_level,
         "created_at": reservation.created_at,
-        "updated_at": reservation.updated_at
+        "updated_at": reservation.updated_at,
     }
 
 
 async def update_reservation(
-        db: AsyncSession,
-        reservation_id: int,
-        reservation_data: ReservationUpdate,
-        current_user_id: int
+    db: AsyncSession,
+    reservation_id: int,
+    reservation_data: ReservationUpdate,
+    current_user_id: int,
 ) -> Dict[str, Any]:
     """更新预约内容（仅限审批中的预约，本人可操作）"""
     reservation = await reservation_crud.get_reservation_by_id(db, reservation_id)
@@ -161,17 +176,23 @@ async def update_reservation(
         if start_time >= end_time:
             raise ValueError("开始时间必须早于结束时间")
 
-        if start_time < datetime.now(timezone.utc):
+        if start_time < datetime.now(timezone.utc).replace(tzinfo=None):
             raise ValueError("不能预约过去的时间")
 
-        has_conflict = await reservation_crud.check_time_conflict(
+        conflicts = await reservation_crud.check_time_conflict(
             db, reservation.lab_id, start_time, end_time, exclude_id=reservation_id
         )
-        if has_conflict:
-            raise ValueError("该时间段已被预约")
+        if conflicts:
+            conflict_times = ", ".join(
+                f"{c.start_time.strftime('%m-%d %H:%M')}~{c.end_time.strftime('%H:%M')}"
+                for c in conflicts
+            )
+            raise ValueError(f"该时间段已被预约：{conflict_times}")
 
     # 更新预约
-    updated = await reservation_crud.update_reservation(db, reservation, reservation_data)
+    updated = await reservation_crud.update_reservation(
+        db, reservation, reservation_data
+    )
 
     return {
         "id": updated.id,
@@ -180,15 +201,15 @@ async def update_reservation(
         "end_time": updated.end_time,
         "purpose": updated.purpose,
         "status": updated.status,
-        "updated_at": updated.updated_at
+        "updated_at": updated.updated_at,
     }
 
 
 async def reapply_reservation(
-        db: AsyncSession,
-        reservation_id: int,
-        reservation_data: ReservationReapply,
-        current_user_id: int
+    db: AsyncSession,
+    reservation_id: int,
+    reservation_data: ReservationReapply,
+    current_user_id: int,
 ) -> Dict[str, Any]:
     """重新申请（被拒绝后重新提交，本人可操作）"""
     reservation = await reservation_crud.get_reservation_by_id(db, reservation_id)
@@ -216,22 +237,28 @@ async def reapply_reservation(
     if reservation_data.start_time >= reservation_data.end_time:
         raise ValueError("开始时间必须早于结束时间")
 
-    if reservation_data.start_time < datetime.now(timezone.utc):
+    if reservation_data.start_time < datetime.now(timezone.utc).replace(tzinfo=None):
         raise ValueError("不能预约过去的时间")
 
     # 检查时间冲突
-    has_conflict = await reservation_crud.check_time_conflict(
+    conflicts = await reservation_crud.check_time_conflict(
         db,
         reservation.lab_id,
         reservation_data.start_time,
         reservation_data.end_time,
-        exclude_id=reservation_id
+        exclude_id=reservation_id,
     )
-    if has_conflict:
-        raise ValueError("该时间段已被预约")
+    if conflicts:
+        conflict_times = ", ".join(
+            f"{c.start_time.strftime('%m-%d %H:%M')}~{c.end_time.strftime('%H:%M')}"
+            for c in conflicts
+        )
+        raise ValueError(f"该时间段已被预约：{conflict_times}")
 
     # 重新申请
-    updated = await reservation_crud.reapply_reservation(db, reservation, reservation_data)
+    updated = await reservation_crud.reapply_reservation(
+        db, reservation, reservation_data
+    )
 
     return {
         "id": updated.id,
@@ -242,14 +269,12 @@ async def reapply_reservation(
         "purpose": updated.purpose,
         "status": updated.status,
         "updated_at": updated.updated_at,
-        "message": "重新申请成功，等待审批"
+        "message": "重新申请成功，等待审批",
     }
 
 
 async def cancel_reservation(
-        db: AsyncSession,
-        reservation_id: int,
-        current_user_id: int
+    db: AsyncSession, reservation_id: int, current_user_id: int
 ) -> None:
     """取消预约（本人或管理员）"""
     reservation = await reservation_crud.get_reservation_by_id(db, reservation_id)

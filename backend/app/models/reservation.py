@@ -39,12 +39,6 @@ class Reservation(Base):
         SMALLINT, server_default="0", comment="状态(0-审批中 1-通过 2-拒绝 3-已取消)"
     )
 
-    current_level: Mapped[int] = mapped_column(
-        SMALLINT,
-        server_default="1",
-        comment="审核阶段(数字为正在审批的层级，0-保存且未提交申请 3-通过所有审批)",
-    )
-
     is_deleted: Mapped[int] = mapped_column(
         SMALLINT, server_default="0", comment="软删除标记(0-正常 1-已删除)"
     )

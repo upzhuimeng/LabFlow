@@ -13,6 +13,7 @@ import { formatDate } from '@/lib/utils';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { SearchableSelect } from '@/components/ui';
 
 const EMPTY_FORM = {
   name: '',
@@ -30,6 +31,7 @@ const STATUS_BADGE_CLASS = {
   0: 'bg-green-100 text-green-700',
   1: 'bg-yellow-100 text-yellow-700',
   2: 'bg-gray-100 text-gray-700',
+  3: 'bg-red-100 text-red-700',
 };
 
 export default function InstrumentPage() {
@@ -47,6 +49,9 @@ export default function InstrumentPage() {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [showMaintenanceAndDisabled, setShowMaintenanceAndDisabled] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingInstrument, setEditingInstrument] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -64,34 +69,48 @@ export default function InstrumentPage() {
       if (activeSearch && activeSearch.trim()) {
         params.keyword = activeSearch.trim();
       }
+      if (showDeleted) {
+        params.status = 3;
+      } else if (!showMaintenanceAndDisabled) {
+        params.status = 0;
+      }
       const res = await api.get('/instruments', { params });
-      const data = res.data;
-      setInstruments(data.items || []);
+      let data = res.data?.items || [];
+      
+      if (showDeleted) {
+        data = data.filter(instrument => instrument.status === 3);
+      } else if (showMaintenanceAndDisabled) {
+        data = data.filter(instrument => instrument.status !== 3);
+      } else {
+        data = data.filter(instrument => instrument.status === 0);
+      }
+      
+      setInstruments(data);
       setPagination(prev => ({
         ...prev,
-        total: data.pagination?.total || 0,
-        totalPages: data.pagination?.total_pages || 0,
+        total: data.length,
+        totalPages: 1,
       }));
     } catch (err) {
       setError(err.message || '获取数据失败');
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize, activeSearch]);
+  }, [pagination.page, pagination.pageSize, activeSearch, showMaintenanceAndDisabled, showDeleted]);
 
-  const fetchLabs = async () => {
+  const fetchLabs = useCallback(async () => {
     try {
-      const res = await api.get('/labs', { params: { page: 1, page_size: 100 } });
+      const res = await api.get('/labs', { params: { page: 1, page_size: 100, status: 0 } });
       setLabs(res.data?.items || []);
     } catch (err) {
       console.error('获取实验室失败:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchInstruments();
     fetchLabs();
-  }, [fetchInstruments]);
+  }, [fetchInstruments, fetchLabs]);
 
   const handleSearch = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
@@ -193,17 +212,6 @@ export default function InstrumentPage() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 gap-3 mb-6">
-        {isAdmin && (
-          <button
-            onClick={handleAdd}
-            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            新增设备
-          </button>
-        )}
         <input
           type="text"
           placeholder="搜索设备名称..."
@@ -214,6 +222,42 @@ export default function InstrumentPage() {
           onKeyDown={handleKeyDown}
           className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
         />
+        <button
+          onClick={handleSearch}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+        >
+          搜索
+        </button>
+        <label className={`flex items-center space-x-2 text-sm text-gray-600 ${showDeleted ? 'opacity-50' : ''}`}>
+          <input
+            type="checkbox"
+            checked={showMaintenanceAndDisabled}
+            disabled={showDeleted}
+            onChange={(e) => {
+              setShowMaintenanceAndDisabled(e.target.checked);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-300"
+          />
+          <span>显示维修和停用</span>
+        </label>
+        {isAdmin && (
+          <label className="flex items-center space-x-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={showDeleted}
+              onChange={(e) => {
+                setShowDeleted(e.target.checked);
+                if (e.target.checked) {
+                  setShowMaintenanceAndDisabled(false);
+                }
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-300"
+            />
+            <span>只看已删除</span>
+          </label>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4">
@@ -225,7 +269,8 @@ export default function InstrumentPage() {
           instruments.map((instrument) => (
             <div
               key={instrument.id}
-              className={`border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 ${
+              onClick={() => router.push(`/instrument/${instrument.id}`)}
+              className={`border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 cursor-pointer ${
                 instrument.status === STATUS.INSTRUMENT.DISABLED ? 'opacity-75' : ''
               }`}
             >
@@ -252,8 +297,8 @@ export default function InstrumentPage() {
                   {instrument.price ? `¥${instrument.price}` : '未填写'}
                 </p>
                 <p>
-                  <span className="font-medium">实验室ID：</span>
-                  {instrument.lab?.name || instrument.lab_id || '未填写'}
+                  <span className="font-medium">实验室：</span>
+                  {instrument.lab_name || instrument.lab_id || '未填写'}
                 </p>
                 {instrument.remark && (
                   <p>
@@ -266,28 +311,32 @@ export default function InstrumentPage() {
               <div className="border-t border-gray-300/70 my-6"></div>
 
               <div className="mt-3 flex justify-end">
-                {isAdmin ? (
+                {isAdmin && instrument.status !== 3 ? (
                   <>
                     <button
-                      onClick={() => handleEdit(instrument)}
+                      onClick={(e) => { e.stopPropagation(); handleEdit(instrument); }}
                       className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors"
                     >
                       编辑
                     </button>
                     <button
-                      onClick={() => setDeleteConfirm(instrument)}
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirm(instrument); }}
                       className="ml-2 px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
                     >
                       删除
                     </button>
                   </>
-                ) : (
+                ) : instrument.status === 0 ? (
                   <button
-                    onClick={() => handleReserve(instrument)}
+                    onClick={(e) => { e.stopPropagation(); handleReserve(instrument); }}
                     className="px-3 py-1.5 text-sm border border-blue-200 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
                   >
                     预约
                   </button>
+                ) : instrument.status === 3 ? (
+                  <span className="text-sm text-gray-400">已删除</span>
+                ) : (
+                  <span className="text-sm text-gray-400">不可预约</span>
                 )}
               </div>
             </div>
@@ -415,17 +464,18 @@ export default function InstrumentPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">实验室</label>
-                  <select
-                    value={formData.lab_id}
-                    onChange={(e) => setFormData({ ...formData, lab_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
-                  >
-                    <option value="">请选择</option>
-                    {labs.map(lab => (
-                      <option key={lab.id} value={lab.id}>{lab.name}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    label="实验室"
+                    name="lab_id"
+                    value={formData.lab_id || ''}
+                    onChange={(e) => {
+                      const { name, value } = e.target;
+                      setFormData(prev => ({ ...prev, [name]: value ? parseInt(value) : '' }));
+                    }}
+                    options={labs.map(lab => ({ value: lab.id, label: lab.name }))}
+                    placeholder="请选择实验室"
+                    searchPlaceholder="搜索实验室..."
+                  />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">备注</label>

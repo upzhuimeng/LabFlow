@@ -9,11 +9,13 @@ export const STATUS = {
     NORMAL: 0,
     MAINTENANCE: 1,
     DISABLED: 2,
+    DELETED: 3,
   },
   LAB: {
     NORMAL: 0,
     MAINTENANCE: 1,
     DISABLED: 2,
+    DELETED: 3,
   },
   USER: {
     ACTIVE: 0,
@@ -25,12 +27,10 @@ export const STATUS = {
     APPROVED: 1,
     REJECTED: 2,
     CANCELLED: 3,
+    DRAFT: 4,
+    INVALID: 5,
   },
   LAB_USER: {
-    ACTIVE: 0,
-    INACTIVE: 1,
-  },
-  TAG_USER: {
     ACTIVE: 0,
     INACTIVE: 1,
   },
@@ -41,11 +41,13 @@ export const STATUS_TEXT = {
     [STATUS.INSTRUMENT.NORMAL]: '正常',
     [STATUS.INSTRUMENT.MAINTENANCE]: '维修中',
     [STATUS.INSTRUMENT.DISABLED]: '停用',
+    [STATUS.INSTRUMENT.DELETED]: '已删除',
   },
   LAB: {
     [STATUS.LAB.NORMAL]: '正常',
     [STATUS.LAB.MAINTENANCE]: '维护中',
     [STATUS.LAB.DISABLED]: '停用',
+    [STATUS.LAB.DELETED]: '已删除',
   },
   USER: {
     [STATUS.USER.ACTIVE]: '正常',
@@ -57,6 +59,8 @@ export const STATUS_TEXT = {
     [STATUS.RESERVATION.APPROVED]: '已通过',
     [STATUS.RESERVATION.REJECTED]: '已拒绝',
     [STATUS.RESERVATION.CANCELLED]: '已取消',
+    [STATUS.RESERVATION.DRAFT]: '草稿',
+    [STATUS.RESERVATION.INVALID]: '已失效',
   },
 };
 
@@ -65,6 +69,7 @@ export const STATUS_COLOR = {
     [STATUS.INSTRUMENT.NORMAL]: 'green',
     [STATUS.INSTRUMENT.MAINTENANCE]: 'yellow',
     [STATUS.INSTRUMENT.DISABLED]: 'gray',
+    [STATUS.INSTRUMENT.DELETED]: 'red',
   },
   LAB: {
     [STATUS.LAB.NORMAL]: 'green',
@@ -81,6 +86,8 @@ export const STATUS_COLOR = {
     [STATUS.RESERVATION.APPROVED]: 'green',
     [STATUS.RESERVATION.REJECTED]: 'red',
     [STATUS.RESERVATION.CANCELLED]: 'gray',
+    [STATUS.RESERVATION.DRAFT]: 'gray',
+    [STATUS.RESERVATION.INVALID]: 'red',
   },
 };
 
@@ -110,16 +117,22 @@ export const PERMISSION = {
   CAN_MANAGE_USER: 'can_manage_user',
 };
 
+export const NOTIFICATION_TYPE = {
+  APPROVAL_RESULT: 1,
+  RESERVATION_INVALID: 2,
+  SYSTEM: 3,
+};
+
+export const NOTIFICATION_TYPE_TEXT = {
+  [NOTIFICATION_TYPE.APPROVAL_RESULT]: '审批结果',
+  [NOTIFICATION_TYPE.RESERVATION_INVALID]: '预约失效',
+  [NOTIFICATION_TYPE.SYSTEM]: '系统通知',
+};
+
 export const ACTION = {
   CREATE: 'create',
   UPDATE: 'update',
   DELETE: 'delete',
-};
-
-export const APPROVAL_LEVEL = {
-  LEVEL_1: 1,
-  LEVEL_2: 2,
-  ALL_PASSED: 3,
 };
 
 export const PAGE_SIZE = {
@@ -138,6 +151,5 @@ export default {
   ROLE_TEXT,
   PERMISSION,
   ACTION,
-  APPROVAL_LEVEL,
   PAGE_SIZE,
 };

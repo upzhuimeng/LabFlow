@@ -2,6 +2,7 @@
 # File: instrument.py
 # Description: Instrument CRUD 操作
 
+from datetime import datetime
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Tuple, List
@@ -26,11 +27,13 @@ async def get_instruments(
     lab_id: int | None = None,
     keyword: str | None = None,
 ) -> Tuple[List[Instrument], int]:
-    """获取仪器列表"""
+    """获取仪器列表（默认排除已删除的仪器）"""
     query = select(Instrument)
 
     if status is not None:
         query = query.where(Instrument.status == status)
+    else:
+        query = query.where(Instrument.status != 3)
 
     if lab_id is not None:
         query = query.where(Instrument.lab_id == lab_id)
@@ -53,7 +56,11 @@ async def create_instrument(
     db: AsyncSession, instrument_data: InstrumentCreate
 ) -> Instrument:
     """创建仪器"""
-    instrument = Instrument(**instrument_data.model_dump())
+    instrument_dict = instrument_data.model_dump()
+    instrument = Instrument(
+        **instrument_dict,
+        created_at=datetime.now(),
+    )
     db.add(instrument)
     await db.commit()
     await db.refresh(instrument)
@@ -74,6 +81,21 @@ async def update_instrument(
 
 
 async def delete_instrument(db: AsyncSession, instrument: Instrument) -> None:
-    """删除仪器（软删除，status=2）"""
-    instrument.status = 2
+    """删除仪器（软删除，status=3）"""
+    instrument.status = 3
     await db.commit()
+
+
+async def soft_delete_instruments_by_lab(db: AsyncSession, lab_id: int) -> int:
+    """根据实验室ID软删除该实验室下的所有仪器（status=3）"""
+    result = await db.execute(
+        select(Instrument).where(Instrument.lab_id == lab_id, Instrument.status != 3)
+    )
+    instruments = result.scalars().all()
+    count = 0
+    for instrument in instruments:
+        instrument.status = 3
+        count += 1
+    if count > 0:
+        await db.commit()
+    return count
