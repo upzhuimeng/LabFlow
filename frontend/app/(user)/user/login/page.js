@@ -30,29 +30,42 @@ export default function LoginPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        
+        if (!form.identifier || !form.password) {
+            setLocalError('请输入手机号/邮箱和密码');
+            return;
+        }
+        
         setLocalError('');
         setLoading(true);
 
         try {
-            const loginData = await api.post('/auth/login', {
+            const result = await api.post('/auth/login', {
                 identifier: form.identifier,
                 password: form.password,
             });
 
-            if (loginData.code === 200) {
-                localStorage.setItem('access_token', loginData.data.access_token);
+            if (result?.code === 200 && result?.data?.access_token) {
+                localStorage.setItem('access_token', result.data.access_token);
                 
-                const userData = await api.get('/users/me');
-                if (userData.code === 200) {
-                    localStorage.setItem('user', JSON.stringify(userData.data));
+                try {
+                    const userData = await api.get('/users/me');
+                    if (userData?.code === 200) {
+                        localStorage.setItem('user', JSON.stringify(userData.data));
+                    }
+                } catch (userErr) {
+                    console.error('Failed to fetch user data:', userErr);
                 }
                 
                 router.push('/dashboard');
             } else {
-                setLocalError(loginData.message || '登录失败');
+                setLocalError(result?.message || '登录失败');
             }
         } catch (err) {
-            setLocalError(err.message || '登录失败，请检查手机号/邮箱和密码');
+            console.error('Login error:', err);
+            const errorMessage = err?.message || err?.data?.message || '登录失败，请检查手机号/邮箱和密码';
+            setLocalError(errorMessage);
         } finally {
             setLoading(false);
         }

@@ -11,6 +11,8 @@ from app.models.user import User
 from app.schemas.lab import LabCreate, LabUpdate, LabResponse
 from app.schemas.base import BaseResponse
 from app.crud import lab as lab_crud
+from app.crud import instrument as instrument_crud
+from app.crud import reservation as reservation_crud
 
 
 router = APIRouter(prefix="/api/v1/labs", tags=["实验室管理"])
@@ -127,5 +129,17 @@ async def delete_lab(
     if not lab:
         raise HTTPException(status_code=404, detail="实验室不存在")
 
+    active_reservations = await reservation_crud.get_active_reservations_by_lab(
+        db, lab_id
+    )
+    if active_reservations:
+        count = len(active_reservations)
+        raise HTTPException(
+            status_code=400,
+            detail=f"该实验室有 {count} 个有效预约（审批中或已通过），请先处理后再删除",
+        )
+
+    deleted_count = await instrument_crud.soft_delete_instruments_by_lab(db, lab_id)
     await lab_crud.delete_lab(db, lab)
-    return BaseResponse(message="实验室删除成功")
+    message = f"实验室删除成功，同时标记了 {deleted_count} 台仪器为已删除"
+    return BaseResponse(message=message)
