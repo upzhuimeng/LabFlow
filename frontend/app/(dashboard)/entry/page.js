@@ -72,6 +72,34 @@ export default function EntryPage() {
 
   const handleInstrumentSubmit = async (e) => {
     e.preventDefault();
+    if (!instrumentForm.name?.trim()) {
+      toast.error('请输入仪器名称');
+      return;
+    }
+    if (!instrumentForm.lab_id) {
+      toast.error('请选择实验室');
+      return;
+    }
+    if (!instrumentForm.model?.trim()) {
+      toast.error('请输入仪器型号');
+      return;
+    }
+    if (!instrumentForm.manufacturer?.trim()) {
+      toast.error('请输入生产厂商');
+      return;
+    }
+    if (!instrumentForm.supplier?.trim()) {
+      toast.error('请输入供应商');
+      return;
+    }
+    if (!instrumentForm.purchase_date) {
+      toast.error('请选择购买日期');
+      return;
+    }
+    if (!instrumentForm.price || parseFloat(instrumentForm.price) <= 0) {
+      toast.error('请输入有效的价格');
+      return;
+    }
     try {
       const submitData = {
         ...instrumentForm,
@@ -88,6 +116,18 @@ export default function EntryPage() {
 
   const handleLabSubmit = async (e) => {
     e.preventDefault();
+    if (!labForm.name?.trim()) {
+      toast.error('请输入实验室名称');
+      return;
+    }
+    if (!labForm.address?.trim()) {
+      toast.error('请输入实验室地址');
+      return;
+    }
+    if (!labForm.capacity || parseInt(labForm.capacity) < 1) {
+      toast.error('请输入有效的容纳人数');
+      return;
+    }
     const errors = {};
     if (!labForm.manager_user_id) {
       errors.manager_user_id = '请选择负责人';
@@ -185,53 +225,68 @@ export default function EntryPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">型号</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    型号 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="model"
                     value={instrumentForm.model}
                     onChange={handleInstrumentChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">厂商</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    生产厂商 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="manufacturer"
                     value={instrumentForm.manufacturer}
                     onChange={handleInstrumentChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">供应商</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    供应商 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="supplier"
                     value={instrumentForm.supplier}
                     onChange={handleInstrumentChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">购买日期</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    购买日期 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="date"
                     name="purchase_date"
                     value={instrumentForm.purchase_date}
                     onChange={handleInstrumentChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">价格</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    价格 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     name="price"
                     value={instrumentForm.price}
                     onChange={handleInstrumentChange}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
@@ -256,6 +311,7 @@ export default function EntryPage() {
                   options={labs.map(lab => ({ value: lab.id, label: lab.name }))}
                   placeholder="请选择实验室"
                   searchPlaceholder="搜索实验室..."
+                  required
                 />
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">备注</label>

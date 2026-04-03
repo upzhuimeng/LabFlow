@@ -142,6 +142,22 @@ export default function InstrumentPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.name?.trim()) {
+      toast.error('请输入设备名称');
+      return;
+    }
+    if (!formData.lab_id) {
+      toast.error('请选择实验室');
+      return;
+    }
+    if (!formData.model?.trim()) {
+      toast.error('请输入设备型号');
+      return;
+    }
+    if (!formData.manufacturer?.trim()) {
+      toast.error('请输入生产厂商');
+      return;
+    }
     try {
       const submitData = {
         ...formData,
@@ -393,20 +409,26 @@ export default function InstrumentPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">型号</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    型号 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={formData.model}
                     onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">厂商</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    生产厂商 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={formData.manufacturer}
                     onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm"
                   />
                 </div>
@@ -462,6 +484,7 @@ export default function InstrumentPage() {
                     options={labs.map(lab => ({ value: lab.id, label: lab.name }))}
                     placeholder="请选择实验室"
                     searchPlaceholder="搜索实验室..."
+                    required
                   />
                 </div>
                 <div className="md:col-span-2">
