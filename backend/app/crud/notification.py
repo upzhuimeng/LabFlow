@@ -62,6 +62,19 @@ async def get_unread_count(db: AsyncSession, user_id: int) -> int:
     return result.scalar_one()
 
 
+async def get_notification_by_id(
+    db: AsyncSession,
+    notification_id: int,
+    user_id: int,
+) -> Notification | None:
+    """获取单条通知详情"""
+    query = select(Notification).where(
+        Notification.id == notification_id, Notification.user_id == user_id
+    )
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
 async def mark_as_read(db: AsyncSession, notification_id: int, user_id: int) -> bool:
     """标记单条通知为已读"""
     query = select(Notification).where(

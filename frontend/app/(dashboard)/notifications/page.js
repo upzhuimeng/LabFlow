@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { NOTIFICATION_TYPE_TEXT } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils';
@@ -18,6 +19,7 @@ const NOTIFICATION_TYPE_CLASS = {
 };
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const toast = useToast();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -135,9 +137,10 @@ export default function NotificationsPage() {
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-4 hover:bg-gray-50 transition-colors ${
+                className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
                   notification.is_read === 0 ? 'bg-blue-50/30' : ''
                 }`}
+                onClick={() => router.push(`/notifications/${notification.id}`)}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-1 min-w-0">
@@ -154,12 +157,15 @@ export default function NotificationsPage() {
                     <h3 className="text-base font-medium text-gray-800 mb-1">
                       {notification.title}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 line-clamp-2">
                       {notification.content}
                     </p>
                     {notification.is_read === 0 && (
                       <button
-                        onClick={() => handleMarkAsRead(notification.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkAsRead(notification.id);
+                        }}
                         className="mt-2 text-xs text-blue-600 hover:text-blue-800"
                       >
                         标为已读
