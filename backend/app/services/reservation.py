@@ -85,11 +85,14 @@ async def get_user_reservations(
     items = []
     for r in reservations:
         lab = await lab_crud.get_lab_by_id(db, r.lab_id)
+        user = await user_crud.get_user_by_id(db, r.user_id)
         approvals = await approval_crud.get_approvals_by_reservation(db, r.id)
         approval_comment = approvals[0].comment if approvals else None
         items.append(
             {
                 "id": r.id,
+                "user_id": r.user_id,
+                "user_name": user.name if user else None,
                 "lab_id": r.lab_id,
                 "lab_name": lab.name if lab else None,
                 "start_time": r.start_time,

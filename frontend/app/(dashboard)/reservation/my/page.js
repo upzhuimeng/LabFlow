@@ -376,7 +376,7 @@ function MyReservationsContent() {
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h2 className="text-lg font-semibold text-blue-600">{reservation.instrument_name}</h2>
+                      <h2 className="text-lg font-semibold text-blue-600">{reservation.lab_name}</h2>
                       <p className="text-sm text-gray-500 mt-1">
                         预约人：{reservation.user_name}
                       </p>
