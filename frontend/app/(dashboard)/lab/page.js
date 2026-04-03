@@ -52,6 +52,7 @@ export default function LabPage() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteInstruments, setDeleteInstruments] = useState([]);
+  const [deleteReservations, setDeleteReservations] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [showMaintenanceAndDisabled, setShowMaintenanceAndDisabled] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
@@ -166,12 +167,22 @@ export default function LabPage() {
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
+    const hasReservations = deleteReservations.length > 0;
     try {
-      await api.delete(`/labs/${deleteConfirm.id}`);
+      const url = hasReservations 
+        ? `/labs/${deleteConfirm.id}?force=true` 
+        : `/labs/${deleteConfirm.id}`;
+      await api.delete(url);
       setDeleteConfirm(null);
+      setDeleteInstruments([]);
+      setDeleteReservations([]);
       fetchLabs();
+      toast.success('实验室删除成功');
     } catch (err) {
       toast.error(err.message || '删除失败');
+      setDeleteConfirm(null);
+      setDeleteInstruments([]);
+      setDeleteReservations([]);
     }
   };
 
@@ -325,11 +336,20 @@ export default function LabPage() {
                       onClick={async (e) => {
                         e.stopPropagation();
                         try {
-                          const res = await api.get('/instruments', { params: { lab_id: lab.id, page: 1, page_size: 100 } });
-                          const instruments = res.data?.items || [];
+                          const [instRes, res0Res, res1Res] = await Promise.all([
+                            api.get('/instruments', { params: { lab_id: lab.id, page: 1, page_size: 100 } }),
+                            api.get('/reservations', { params: { lab_id: lab.id, page: 1, page_size: 100, status: 0 } }),
+                            api.get('/reservations', { params: { lab_id: lab.id, page: 1, page_size: 100, status: 1 } }),
+                          ]);
+                          const instruments = instRes.data?.items || [];
+                          const pending = res0Res.data?.items || [];
+                          const approved = res1Res.data?.items || [];
+                          const allReservations = [...pending, ...approved];
                           setDeleteInstruments(instruments);
+                          setDeleteReservations(allReservations);
                         } catch (err) {
                           setDeleteInstruments([]);
+                          setDeleteReservations([]);
                         }
                         setDeleteConfirm(lab);
                       }}
@@ -543,9 +563,24 @@ export default function LabPage() {
                 </ul>
               </div>
             )}
+            {deleteReservations.length > 0 && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm font-medium mb-2">
+                  ⚠️ 该实验室存在 {deleteReservations.length} 个有效预约，删除后将导致以下预约失效：
+                </p>
+                <ul className="text-sm text-red-600 space-y-1">
+                  {deleteReservations.slice(0, 5).map(res => (
+                    <li key={res.id}>• {res.user_name || '未知'}（{res.user_phone || '无联系方式'}）| {res.start_time ? new Date(res.start_time).toLocaleString('zh-CN', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}) : '未知时间'} | {res.status === 0 ? '审批中' : '已通过'}</li>
+                  ))}
+                  {deleteReservations.length > 5 && (
+                    <li>...还有 {deleteReservations.length - 5} 个</li>
+                  )}
+                </ul>
+              </div>
+            )}
             <div className="flex gap-3">
               <button
-                onClick={() => { setDeleteConfirm(null); setDeleteInstruments([]); }}
+                onClick={() => { setDeleteConfirm(null); setDeleteInstruments([]); setDeleteReservations([]); }}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-sm"
               >
                 取消
@@ -554,7 +589,7 @@ export default function LabPage() {
                 onClick={handleDelete}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
               >
-                删除
+                {deleteReservations.length > 0 ? '强制删除' : '删除'}
               </button>
             </div>
           </div>

@@ -52,13 +52,20 @@ async def get_reservations_by_user(
 
 
 async def get_all_reservations(
-    db: AsyncSession, skip: int = 0, limit: int = 100, status: int | None = None
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 100,
+    status: int | None = None,
+    lab_id: int | None = None,
 ) -> Tuple[List[Reservation], int]:
     """获取所有预约（管理员用）"""
     query = select(Reservation).where(Reservation.is_deleted == 0)
 
     if status is not None:
         query = query.where(Reservation.status == status)
+
+    if lab_id is not None:
+        query = query.where(Reservation.lab_id == lab_id)
 
     total_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(total_query)
@@ -164,3 +171,23 @@ async def get_active_reservations_by_lab(
     )
     result = await db.execute(query)
     return list(result.scalars().all())
+
+
+async def invalidate_reservations_by_lab(db: AsyncSession, lab_id: int) -> int:
+    """将实验室的所有有效预约标记为失效（status=5）"""
+    query = select(Reservation).where(
+        Reservation.lab_id == lab_id,
+        Reservation.is_deleted == 0,
+        Reservation.status.in_([0, 1]),
+    )
+    result = await db.execute(query)
+    reservations = result.scalars().all()
+
+    count = 0
+    for res in reservations:
+        res.status = 5
+        count += 1
+
+    if count > 0:
+        await db.commit()
+    return count

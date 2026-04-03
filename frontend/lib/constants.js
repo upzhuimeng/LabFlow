@@ -28,6 +28,7 @@ export const STATUS = {
     REJECTED: 2,
     CANCELLED: 3,
     DRAFT: 4,
+    INVALID: 5,
   },
   LAB_USER: {
     ACTIVE: 0,
@@ -59,6 +60,7 @@ export const STATUS_TEXT = {
     [STATUS.RESERVATION.REJECTED]: '已拒绝',
     [STATUS.RESERVATION.CANCELLED]: '已取消',
     [STATUS.RESERVATION.DRAFT]: '草稿',
+    [STATUS.RESERVATION.INVALID]: '已失效',
   },
 };
 
@@ -85,6 +87,7 @@ export const STATUS_COLOR = {
     [STATUS.RESERVATION.REJECTED]: 'red',
     [STATUS.RESERVATION.CANCELLED]: 'gray',
     [STATUS.RESERVATION.DRAFT]: 'gray',
+    [STATUS.RESERVATION.INVALID]: 'red',
   },
 };
 

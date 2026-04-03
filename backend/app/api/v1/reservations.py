@@ -40,6 +40,7 @@ async def list_reservations(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status: Optional[int] = Query(None, ge=0, le=4),
+    lab_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -50,7 +51,9 @@ async def list_reservations(
         from app.crud.reservation import get_all_reservations
 
         skip = (page - 1) * page_size
-        reservations, total = await get_all_reservations(db, skip, page_size, status)
+        reservations, total = await get_all_reservations(
+            db, skip, page_size, status, lab_id
+        )
 
         items = []
         for r in reservations:
@@ -66,6 +69,7 @@ async def list_reservations(
                 {
                     "id": r.id,
                     "user_name": user.name if user else None,
+                    "user_phone": user.phone if user else None,
                     "lab_name": lab.name if lab else None,
                     "start_time": r.start_time,
                     "end_time": r.end_time,
