@@ -45,6 +45,7 @@ class UserUpdate(BaseModel):
     is_active: int | None = Field(
         None, ge=0, le=2, description="状态(0-正常,1-封禁,2-注销)"
     )
+    password: str | None = Field(None, description="密码（可选）")
 
 
 class UserResponse(BaseModel):

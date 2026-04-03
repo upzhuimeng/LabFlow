@@ -6,7 +6,7 @@
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Tuple, List
+from typing import Tuple, Sequence
 from datetime import datetime
 
 from app.models.user import User
@@ -41,7 +41,7 @@ async def get_users(
     role: int | None = None,
     is_active: int | None = None,
     keyword: str | None = None,
-) -> Tuple[List[User], int]:
+) -> Tuple[Sequence[User], int]:
     """获取用户列表"""
     query = select(User)
 
@@ -86,6 +86,10 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
 async def update_user(db: AsyncSession, user: User, update_data: UserUpdate) -> User:
     """更新用户"""
     update_dict = update_data.model_dump(exclude_unset=True)
+
+    if "password" in update_dict and update_dict["password"]:
+        update_dict["password_hash"] = hash_password(update_dict.pop("password"))
+
     for field, value in update_dict.items():
         if hasattr(user, field):
             setattr(user, field, value)
