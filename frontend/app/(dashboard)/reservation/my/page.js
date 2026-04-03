@@ -256,9 +256,7 @@ function MyReservationsContent() {
   }, [showReservationForm, showForm, fetchReservations]);
 
   const handleReservationSuccess = () => {
-    setShowForm(false);
-    setSelectedLabId('');
-    fetchReservations();
+    window.location.href = '/reservation/my';
   };
 
   const handleReservationCancel = () => {

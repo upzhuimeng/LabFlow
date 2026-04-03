@@ -30,7 +30,7 @@ async def create_reservation(
         result = await reservation_service.create_reservation(
             db, reservation_data, current_user.id
         )
-        return BaseResponse(code=201, message="预约提交成功，等待审批", data=result)
+        return BaseResponse(code=200, message="预约提交成功，等待审批", data=result)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
