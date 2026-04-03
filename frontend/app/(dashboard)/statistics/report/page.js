@@ -179,7 +179,7 @@ export default function StatisticsReportPage() {
   const toastRef = useRef(toast);
   toastRef.current = toast;
 
-  const [reportType, setReportType] = useState('weekly');
+  const [reportType, setReportType] = useState('daily');
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
