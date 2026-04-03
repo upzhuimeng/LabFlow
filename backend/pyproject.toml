@@ -9,6 +9,7 @@ dependencies = [
     "asyncmy>=0.2.11",
     "fastapi>=0.133.1",
     "pydantic>=2.12.5",
+    "pydantic-ai>=1.77.0",
     "pymysql>=1.1.2",
     "python-dotenv>=1.2.2",
     "python-jose[cryptography]>=3.3.0",

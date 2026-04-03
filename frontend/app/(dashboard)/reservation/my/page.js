@@ -14,6 +14,7 @@ import { formatDateTime } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { SearchableSelect } from '@/components/ui';
+import ReservationAssistant from '@/components/ReservationAssistant';
 
 const STATUS_BADGE_CLASS = {
   0: 'bg-blue-100 text-blue-700',
@@ -22,7 +23,7 @@ const STATUS_BADGE_CLASS = {
   3: 'bg-gray-100 text-gray-700',
 };
 
-function ReservationForm({ labId, instrumentId, onSuccess, onCancel }) {
+function ReservationForm({ labId, instrumentId, prefilledStartTime, prefilledEndTime, onSuccess, onCancel }) {
   const toast = useToast();
   const [labInfo, setLabInfo] = useState(null);
   const [instrumentInfo, setInstrumentInfo] = useState(null);
@@ -33,6 +34,21 @@ function ReservationForm({ labId, instrumentId, onSuccess, onCancel }) {
     purpose: '',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (prefilledStartTime) {
+      const formatted = prefilledStartTime.includes('T')
+        ? prefilledStartTime.slice(0, 16)
+        : prefilledStartTime.replace(' ', 'T').slice(0, 16);
+      setForm(prev => ({ ...prev, start_time: formatted }));
+    }
+    if (prefilledEndTime) {
+      const formatted = prefilledEndTime.includes('T')
+        ? prefilledEndTime.slice(0, 16)
+        : prefilledEndTime.replace(' ', 'T').slice(0, 16);
+      setForm(prev => ({ ...prev, end_time: formatted }));
+    }
+  }, [prefilledStartTime, prefilledEndTime]);
 
   useEffect(() => {
     const fetchInfo = async () => {
@@ -200,6 +216,8 @@ function MyReservationsContent() {
   
   const labId = searchParams.get('lab_id');
   const instrumentId = searchParams.get('instrument_id');
+  const prefilledStartTime = searchParams.get('start_time');
+  const prefilledEndTime = searchParams.get('end_time');
   const showReservationForm = labId || instrumentId;
 
   const [reservations, setReservations] = useState([]);
@@ -311,6 +329,12 @@ function MyReservationsContent() {
         </button>
       </div>
 
+      {!showReservationForm && !showForm && (
+        <div className="mb-6">
+          <ReservationAssistant />
+        </div>
+      )}
+
       {showReservationForm || showForm ? (
         <>
           <div className="mb-4 flex items-center">
@@ -341,6 +365,8 @@ function MyReservationsContent() {
             <ReservationForm
               labId={labId || (selectedLabId ? selectedLabId : null)}
               instrumentId={instrumentId}
+              prefilledStartTime={prefilledStartTime}
+              prefilledEndTime={prefilledEndTime}
               onSuccess={handleReservationSuccess}
               onCancel={handleReservationCancel}
             />
