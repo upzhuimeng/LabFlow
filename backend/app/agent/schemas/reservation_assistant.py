@@ -59,3 +59,19 @@ class ReservationAssistantResult(BaseModel):
     )
     message: str = Field(description="返回消息")
     available_slots: list[TimeSlot] = Field(default=[], description="其他可用时间段")
+
+
+class AgentOutput(BaseModel):
+    """智能助手输出格式（固定格式）"""
+
+    lab_id: int | None = Field(description="推荐的实验室ID，找不到时为null")
+    lab_name: str | None = Field(description="实验室名称")
+    address: str | None = Field(description="实验室地址")
+    start_time: str | None = Field(
+        description="推荐开始时间，格式YYYY-MM-DDTHH:MM:SS，找不到时为null"
+    )
+    end_time: str | None = Field(
+        description="推荐结束时间，格式YYYY-MM-DDTHH:MM:SS，找不到时为null"
+    )
+    reason: str = Field(description="推荐理由或未找到原因")
+    purpose: str | None = Field(description="预约用途说明，找不到时为null")

@@ -16,6 +16,7 @@ async def create_notification(
     content: str,
     notif_type: int = 3,
     related_id: int | None = None,
+    attachment: str | None = None,
 ) -> Notification:
     """创建通知"""
     notification = Notification(
@@ -24,6 +25,7 @@ async def create_notification(
         content=content,
         type=notif_type,
         related_id=related_id,
+        attachment=attachment,
     )
     db.add(notification)
     await db.commit()

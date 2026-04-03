@@ -54,7 +54,9 @@ async def get_lab_details(
     if not lab or lab.status != 0:
         return None
 
-    manager_id, manager_name = await lab_crud.get_lab_manager(ctx.deps.db, lab_id)
+    manager_id, manager_name, manager_phone = await lab_crud.get_lab_manager(
+        ctx.deps.db, lab_id
+    )
 
     return LabDetail(
         id=lab.id,

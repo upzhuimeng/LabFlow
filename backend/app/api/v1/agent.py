@@ -15,6 +15,7 @@ from app.core.agents import get_reservation_agent
 from app.models.user import User
 from app.schemas.base import BaseResponse
 from app.crud import agent_log as agent_log_crud
+from app.crud import notification as notification_crud
 from app.utils.context_storage import save_context, load_context
 
 
@@ -23,34 +24,15 @@ router = APIRouter(prefix="/api/v1/agent", tags=["智能助手"])
 RATE_LIMIT_MINUTES = 10
 RATE_LIMIT_MAX_REQUESTS = 3
 
+NOTIF_TYPE_AGENT_RESULT = 4
+
 
 class ReservationAssistantRequest(BaseModel):
     message: str = Field(..., description="用户的需求描述")
-    notification_id: int | None = Field(
-        None, description="关联的通知ID（可选，用于标记卡片过期）"
-    )
 
 
 class CompleteConversationRequest(BaseModel):
     log_id: int = Field(..., description="日志ID")
-
-
-def parse_agent_response(text: str) -> dict:
-    """解析 Agent 返回的文本，提取 JSON 结果"""
-    json_patterns = [
-        r"```json\s*(\{[^}]+\})\s*```",
-        r"```\s*(\{[^}]+\})\s*```",
-        r"(\{[^{}]*\})",
-    ]
-    for pattern in json_patterns:
-        json_match = re.search(pattern, text, re.DOTALL)
-        if json_match:
-            try:
-                data = json.loads(json_match.group(1))
-                return data
-            except json.JSONDecodeError:
-                pass
-    return {"lab_id": None}
 
 
 @router.post("/reservation/assist", response_model=BaseResponse)
@@ -101,8 +83,12 @@ async def assist_reservation(
             deps=deps,
         )
 
-        text_output = result.output
-        parsed = parse_agent_response(text_output)
+        agent_output = result.output
+        text_output = (
+            agent_output.model_dump_json()
+            if hasattr(agent_output, "model_dump_json")
+            else str(agent_output)
+        )
 
         context_data["messages"].append(
             {
@@ -128,32 +114,50 @@ async def assist_reservation(
             )
             log_id = log.id
 
-        if parsed.get("lab_id"):
+        if (
+            agent_output.lab_id
+            and agent_output.lab_name
+            and agent_output.start_time
+            and agent_output.end_time
+        ):
             suggestion = {
-                "lab_id": parsed["lab_id"],
-                "lab_name": parsed.get("lab_name", ""),
-                "address": parsed.get("address", ""),
-                "start_time": parsed.get("start_time", ""),
-                "end_time": parsed.get("end_time", ""),
-                "reason": parsed.get("reason", ""),
-                "equipment": parsed.get("equipment", []),
+                "lab_id": agent_output.lab_id,
+                "lab_name": agent_output.lab_name or "",
+                "address": agent_output.address or "",
+                "start_time": agent_output.start_time or "",
+                "end_time": agent_output.end_time or "",
+                "reason": agent_output.reason or "",
+                "purpose": agent_output.purpose or "",
             }
+            suggestion_json = json.dumps(suggestion, ensure_ascii=False)
+            await notification_crud.create_notification(
+                db,
+                user_id=current_user.id,
+                title="智能推荐结果",
+                content=f"已为您找到合适的实验室：{agent_output.lab_name}",
+                notif_type=NOTIF_TYPE_AGENT_RESULT,
+                related_id=agent_output.lab_id,
+                attachment=suggestion_json,
+            )
             return BaseResponse(
                 data={
                     "success": True,
-                    "suggestion": suggestion,
-                    "message": "已为您找到合适的实验室，请确认后提交预约",
-                    "available_slots": [],
+                    "message": "推荐结果已发送到您的消息通知，请查收",
                     "log_id": log_id,
                 }
             )
         else:
+            await notification_crud.create_notification(
+                db,
+                user_id=current_user.id,
+                title="智能推荐结果",
+                content=agent_output.reason or "未找到合适的实验室",
+                notif_type=NOTIF_TYPE_AGENT_RESULT,
+            )
             return BaseResponse(
                 data={
                     "success": False,
-                    "suggestion": None,
-                    "message": text_output if text_output else "未找到合适的实验室",
-                    "available_slots": [],
+                    "message": "推荐结果已发送到您的消息通知，请查收",
                     "log_id": log_id,
                 }
             )
@@ -161,9 +165,7 @@ async def assist_reservation(
         return BaseResponse(
             data={
                 "success": False,
-                "suggestion": None,
                 "message": f"处理失败: {str(e)}",
-                "available_slots": [],
             }
         )
 

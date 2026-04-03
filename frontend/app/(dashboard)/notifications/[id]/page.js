@@ -4,11 +4,11 @@
 
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { NOTIFICATION_TYPE_TEXT, STATUS_TEXT } from '@/lib/constants';
+import { STATUS_TEXT } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
 
@@ -16,6 +16,23 @@ const NOTIFICATION_TYPE_CLASS = {
   1: 'bg-blue-100 text-blue-700',
   2: 'bg-yellow-100 text-yellow-700',
   3: 'bg-gray-100 text-gray-700',
+  4: 'bg-purple-100 text-purple-700',
+};
+
+const TYPE_TEXT = {
+  1: '审批结果',
+  2: '预约失效',
+  3: '系统通知',
+  4: '智能推荐',
+};
+
+const RESERVATION_STATUS_TEXT = {
+  0: '审批中',
+  1: '已通过',
+  2: '已拒绝',
+  3: '已取消',
+  4: '草稿',
+  5: '已失效',
 };
 
 const STATUS_BADGE_CLASS = {
@@ -25,6 +42,77 @@ const STATUS_BADGE_CLASS = {
   3: 'bg-gray-100 text-gray-700',
   4: 'bg-yellow-100 text-yellow-700',
 };
+
+function AgentRecommendationCard({ data }) {
+  const router = useRouter();
+
+  const handleAccept = () => {
+    if (data.lab_id && data.start_time && data.end_time) {
+      const params = new URLSearchParams({
+        lab_id: data.lab_id.toString(),
+        start_time: data.start_time,
+        end_time: data.end_time,
+        from_assistant: 'true',
+      });
+      if (data.purpose) {
+        params.set('purpose', data.purpose);
+      }
+      router.push(`/reservation/my?${params}`);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-purple-200 p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h4 className="font-medium text-purple-800">{data.lab_name || '未知实验室'}</h4>
+          <p className="text-sm text-gray-500">{data.address || '地址未提供'}</p>
+        </div>
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+          智能推荐
+        </span>
+      </div>
+      {data.start_time && data.end_time && (
+        <p className="text-sm text-gray-600 mb-2">
+          <span className="font-medium">推荐时间：</span>
+          {data.start_time} ~ {data.end_time}
+        </p>
+      )}
+      {data.reason && (
+        <p className="text-sm text-gray-600 mb-2">
+          <span className="font-medium">推荐理由：</span>
+          {data.reason}
+        </p>
+      )}
+      {data.purpose && (
+        <p className="text-sm text-gray-600 mb-2">
+          <span className="font-medium">用途说明：</span>
+          {data.purpose}
+        </p>
+      )}
+      {data.equipment && data.equipment.length > 0 && (
+        <p className="text-sm text-gray-600 mb-2">
+          <span className="font-medium">设备：</span>
+          {Array.isArray(data.equipment) ? data.equipment.join('、') : data.equipment}
+        </p>
+      )}
+      <div className="mt-4 flex gap-2">
+        <button
+          onClick={handleAccept}
+          className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+        >
+          确认预约
+        </button>
+        <button
+          onClick={() => toast.info('功能开发中，敬请期待')}
+          className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 text-sm"
+        >
+          还有问题？
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function NotificationDetailPage() {
   const { id } = useParams();
@@ -132,7 +220,7 @@ export default function NotificationDetailPage() {
                 NOTIFICATION_TYPE_CLASS[3]
               }`}
             >
-              {NOTIFICATION_TYPE_TEXT[notification.type] || '系统通知'}
+              {TYPE_TEXT[notification.type] || '系统通知'}
             </span>
             <span className="text-sm text-gray-400">
               {formatDateTime(notification.created_at)}
@@ -173,7 +261,28 @@ export default function NotificationDetailPage() {
 
         <div className="border-t border-gray-100 p-6 bg-gray-50/50">
           <h3 className="text-sm font-medium text-gray-700 mb-3">附件</h3>
-          {reservation ? (
+          {notification.type === 4 && notification.attachment ? (
+            (() => {
+              let attachmentData;
+              try {
+                attachmentData = typeof notification.attachment === 'string' 
+                  ? JSON.parse(notification.attachment) 
+                  : notification.attachment;
+              } catch {
+                return null;
+              }
+              if (!attachmentData.lab_id) {
+                return (
+                  <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-center">
+                    <p className="text-gray-500 text-sm">
+                      {attachmentData.reason || '未找到合适的实验室推荐'}
+                    </p>
+                  </div>
+                );
+              }
+              return <AgentRecommendationCard data={attachmentData} />;
+            })()
+          ) : reservation ? (
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <div className="flex items-start justify-between mb-3">
                 <div>
@@ -185,7 +294,7 @@ export default function NotificationDetailPage() {
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   STATUS_BADGE_CLASS[reservation.status] || STATUS_BADGE_CLASS[0]
                 }`}>
-                  {STATUS_TEXT.RESERVATION[reservation.status] || '未知'}
+                  {RESERVATION_STATUS_TEXT[reservation.status] || '未知'}
                 </span>
               </div>
               <div className="text-sm text-gray-600">
