@@ -49,7 +49,7 @@ async def create_instrument(
 async def list_instruments(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    status: Optional[int] = Query(None, ge=0, le=2),
+    status: Optional[int] = Query(None, ge=0, le=3),
     lab_id: Optional[int] = Query(None),
     keyword: Optional[str] = Query(None, max_length=100),
     db: AsyncSession = Depends(get_db),

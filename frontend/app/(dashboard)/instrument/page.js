@@ -69,17 +69,13 @@ export default function InstrumentPage() {
       if (activeSearch && activeSearch.trim()) {
         params.keyword = activeSearch.trim();
       }
-      const res = await api.get('/instruments', { params });
-      let data = res.data?.items || [];
-      
       if (showDeleted) {
-        data = data.filter(instrument => instrument.status === 3);
-      } else if (showMaintenanceAndDisabled) {
-        data = data.filter(instrument => instrument.status !== 3);
-      } else {
-        data = data.filter(instrument => instrument.status === 0);
+        params.status = 3;
+      } else if (!showMaintenanceAndDisabled) {
+        params.status = 0;
       }
-      
+      const res = await api.get('/instruments', { params });
+      const data = res.data?.items || [];
       setInstruments(data);
       setPagination(prev => ({
         ...prev,
@@ -91,7 +87,7 @@ export default function InstrumentPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize, activeSearch, showMaintenanceAndDisabled, showDeleted, isAdmin]);
+  }, [pagination.page, pagination.pageSize, activeSearch, showMaintenanceAndDisabled, showDeleted]);
 
   const fetchLabs = async () => {
     try {
