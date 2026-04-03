@@ -11,6 +11,7 @@ from app.models.lab_user import LabUser
 from app.crud import approval as approval_crud
 from app.crud import lab as lab_crud
 from app.crud import user as user_crud
+from app.crud import notification as notification_crud
 
 
 async def is_lab_manager(db: AsyncSession, user_id: int, lab_id: int) -> bool:
@@ -85,8 +86,19 @@ async def approve_reservation(
     await approval_crud.create_approval(db, reservation_id, approver_id, 0, comment)
 
     reservation.status = 1
+    await db.flush()
+    await db.refresh(reservation)
 
     await db.commit()
+
+    await notification_crud.create_notification(
+        db,
+        user_id=reservation.user_id,
+        title="预约审批通过",
+        content=f"您的预约（{reservation.start_time.strftime('%Y-%m-%d %H:%M')} 至 {reservation.end_time.strftime('%H:%M')}）已通过审批",
+        notif_type=1,
+        related_id=reservation_id,
+    )
 
     return {
         "id": reservation.id,
@@ -128,8 +140,20 @@ async def reject_reservation(
     await approval_crud.create_approval(db, reservation_id, approver_id, 1, comment)
 
     reservation.status = 2
+    await db.flush()
+    await db.refresh(reservation)
 
     await db.commit()
+
+    reject_reason = comment or "无"
+    await notification_crud.create_notification(
+        db,
+        user_id=reservation.user_id,
+        title="预约审批被拒绝",
+        content=f"您的预约（{reservation.start_time.strftime('%Y-%m-%d %H:%M')} 至 {reservation.end_time.strftime('%H:%M')}）已被拒绝。原因：{reject_reason}",
+        notif_type=1,
+        related_id=reservation_id,
+    )
 
     return {
         "id": reservation.id,
@@ -179,8 +203,53 @@ async def get_pending_approvals(
                 "start_time": res.start_time,
                 "end_time": res.end_time,
                 "purpose": res.purpose,
+                "status": res.status,
                 "created_at": res.created_at,
             }
         )
 
     return pending
+
+
+async def get_all_approvals(db: AsyncSession, approver_id: int) -> list[Dict[str, Any]]:
+    """获取所有我负责的预约列表（含已审批、已拒绝等）"""
+    labs_result = await db.execute(
+        select(LabUser.lab_id).where(
+            LabUser.user_id == approver_id, LabUser.is_active == 0
+        )
+    )
+    managed_lab_ids = [r[0] for r in labs_result.fetchall()]
+
+    if not managed_lab_ids:
+        return []
+
+    reservations_result = await db.execute(
+        select(Reservation).where(
+            Reservation.lab_id.in_(managed_lab_ids),
+        )
+    )
+    all_reservations = reservations_result.scalars().all()
+
+    result = []
+    for res in all_reservations:
+        lab = await lab_crud.get_lab_by_id(db, res.lab_id)
+        user = await user_crud.get_user_by_id(db, res.user_id)
+        my_approval = await approval_crud.get_approval_by_approver(
+            db, res.id, approver_id
+        )
+        result.append(
+            {
+                "id": res.id,
+                "user_name": user.name if user else None,
+                "lab_id": res.lab_id,
+                "lab_name": lab.name if lab else None,
+                "start_time": res.start_time,
+                "end_time": res.end_time,
+                "purpose": res.purpose,
+                "status": res.status,
+                "created_at": res.created_at,
+                "approval_comment": my_approval.comment if my_approval else None,
+            }
+        )
+
+    return result
