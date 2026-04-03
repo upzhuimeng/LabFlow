@@ -9,6 +9,7 @@ export const STATUS = {
     NORMAL: 0,
     MAINTENANCE: 1,
     DISABLED: 2,
+    DELETED: 3,
   },
   LAB: {
     NORMAL: 0,
@@ -39,6 +40,7 @@ export const STATUS_TEXT = {
     [STATUS.INSTRUMENT.NORMAL]: '正常',
     [STATUS.INSTRUMENT.MAINTENANCE]: '维修中',
     [STATUS.INSTRUMENT.DISABLED]: '停用',
+    [STATUS.INSTRUMENT.DELETED]: '已删除',
   },
   LAB: {
     [STATUS.LAB.NORMAL]: '正常',
@@ -65,6 +67,7 @@ export const STATUS_COLOR = {
     [STATUS.INSTRUMENT.NORMAL]: 'green',
     [STATUS.INSTRUMENT.MAINTENANCE]: 'yellow',
     [STATUS.INSTRUMENT.DISABLED]: 'gray',
+    [STATUS.INSTRUMENT.DELETED]: 'red',
   },
   LAB: {
     [STATUS.LAB.NORMAL]: 'green',
@@ -109,6 +112,18 @@ export const PERMISSION = {
   CAN_CREATE_RESERVATION: 'can_create_reservation',
   CAN_APPROVE_RESERVATION: 'can_approve_reservation',
   CAN_MANAGE_USER: 'can_manage_user',
+};
+
+export const NOTIFICATION_TYPE = {
+  APPROVAL_RESULT: 1,
+  RESERVATION_INVALID: 2,
+  SYSTEM: 3,
+};
+
+export const NOTIFICATION_TYPE_TEXT = {
+  [NOTIFICATION_TYPE.APPROVAL_RESULT]: '审批结果',
+  [NOTIFICATION_TYPE.RESERVATION_INVALID]: '预约失效',
+  [NOTIFICATION_TYPE.SYSTEM]: '系统通知',
 };
 
 export const ACTION = {

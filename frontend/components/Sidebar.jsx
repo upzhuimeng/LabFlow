@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { ROLE_TEXT } from '@/lib/constants';
+import NotificationBell from './NotificationBell';
 
 /**
  * 导航菜单配置
@@ -219,7 +220,7 @@ export default function Sidebar() {
           )}
 
           {/* 审批菜单（实验室管理员可见） */}
-          {isLabManager && !isAdmin && (
+          {isLabManager && (
             <nav className="space-y-1 mb-6">
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 px-3">
                 审批
@@ -260,6 +261,8 @@ export default function Sidebar() {
                 </p>
               </div>
             </div>
+            {/* 通知铃铛 */}
+            <NotificationBell />
             {/* 退出登录按钮 */}
             <button
               onClick={logout}
