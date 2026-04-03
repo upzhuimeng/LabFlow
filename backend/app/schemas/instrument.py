@@ -46,6 +46,7 @@ class InstrumentResponse(BaseModel):
     price: Decimal
     status: int
     lab_id: int
+    lab_name: str | None = None
     remark: str | None
     created_at: datetime
     updated_at: datetime | None

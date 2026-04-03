@@ -13,10 +13,11 @@ from sqlalchemy import (
     ForeignKey,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from decimal import Decimal
 from datetime import datetime
 from app.db.base import Base
+from app.models.lab import Lab
 
 
 class Instrument(Base):
