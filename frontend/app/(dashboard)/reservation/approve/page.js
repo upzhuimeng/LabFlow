@@ -24,7 +24,7 @@ export default function ApproveReservationsPage() {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('0');
   const [selectedItem, setSelectedItem] = useState(null);
   const [actionType, setActionType] = useState(null);
   const [comment, setComment] = useState('');
