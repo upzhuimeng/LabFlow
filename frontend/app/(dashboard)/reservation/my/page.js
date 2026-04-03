@@ -313,6 +313,17 @@ function MyReservationsContent() {
 
       {showReservationForm || showForm ? (
         <>
+          <div className="mb-4 flex items-center">
+          <button
+            onClick={() => {
+              window.location.href = '/reservation/my';
+            }}
+            className="flex items-center text-gray-600 hover:text-gray-800 mr-4"
+          >
+              <span className="mr-1">←</span>
+              <span>返回</span>
+            </button>
+          </div>
           {showForm && !labId && (
             <div className="mb-4">
               <SearchableSelect
