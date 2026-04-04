@@ -1,6 +1,10 @@
 -- LabFlow Database Schema
 -- Generated from Alembic migrations
 
+-- 创建数据库（如果不存在）
+CREATE DATABASE IF NOT EXISTS labflow DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE labflow;
+
 CREATE TABLE alembic_version (
     version_num VARCHAR(32) NOT NULL,
     PRIMARY KEY (version_num)
