@@ -5,12 +5,12 @@
 CREATE DATABASE IF NOT EXISTS labflow DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE labflow;
 
-CREATE TABLE alembic_version (
+CREATE TABLE IF NOT EXISTS alembic_version (
     version_num VARCHAR(32) NOT NULL,
     PRIMARY KEY (version_num)
 );
 
-CREATE TABLE lab (
+CREATE TABLE IF NOT EXISTS lab (
     id INTEGER NOT NULL AUTO_INCREMENT COMMENT '实验室ID',
     name VARCHAR(100) NOT NULL COMMENT '名称',
     address VARCHAR(255) NOT NULL COMMENT '地址',
@@ -23,7 +23,7 @@ CREATE TABLE lab (
     PRIMARY KEY (id)
 );
 
-CREATE TABLE user (
+CREATE TABLE IF NOT EXISTS user (
     id INTEGER NOT NULL AUTO_INCREMENT COMMENT '用户ID',
     name VARCHAR(50) NOT NULL COMMENT '用户名',
     password_hash VARCHAR(255) NOT NULL COMMENT '密码',
@@ -42,7 +42,7 @@ CREATE TABLE user (
 CREATE INDEX ix_user_email ON user (email);
 CREATE INDEX ix_user_name ON user (name);
 
-CREATE TABLE instrument (
+CREATE TABLE IF NOT EXISTS instrument (
     id INTEGER NOT NULL AUTO_INCREMENT COMMENT '仪器ID',
     name VARCHAR(100) NOT NULL COMMENT '仪器名称',
     model VARCHAR(100) NOT NULL COMMENT '型号',
@@ -61,7 +61,7 @@ CREATE TABLE instrument (
 
 CREATE INDEX ix_instrument_lab_id ON instrument (lab_id);
 
-CREATE TABLE lab_user (
+CREATE TABLE IF NOT EXISTS lab_user (
     id INTEGER NOT NULL AUTO_INCREMENT COMMENT 'ID',
     lab_id INTEGER NOT NULL COMMENT '实验室ID',
     user_id INTEGER NOT NULL COMMENT '用户ID',
@@ -73,7 +73,7 @@ CREATE TABLE lab_user (
     UNIQUE KEY lab_user_unique (lab_id, user_id)
 );
 
-CREATE TABLE lab_user_log (
+CREATE TABLE IF NOT EXISTS lab_user_log (
     id INTEGER NOT NULL AUTO_INCREMENT COMMENT '日志ID',
     lab_user_id INTEGER NOT NULL COMMENT '关联记录ID',
     lab_id INTEGER NOT NULL COMMENT '实验室ID',
@@ -94,7 +94,7 @@ CREATE INDEX ix_lab_user_log_lab_user_id ON lab_user_log (lab_user_id);
 CREATE INDEX ix_lab_user_log_operator_id ON lab_user_log (operator_id);
 CREATE INDEX ix_lab_user_log_user_id ON lab_user_log (user_id);
 
-CREATE TABLE reservation (
+CREATE TABLE IF NOT EXISTS reservation (
     id INTEGER NOT NULL AUTO_INCREMENT COMMENT '预约ID',
     user_id INTEGER NOT NULL COMMENT '申请人ID',
     lab_id INTEGER NOT NULL COMMENT '实验室ID',
@@ -113,7 +113,7 @@ CREATE TABLE reservation (
 CREATE INDEX ix_reservation_lab_id ON reservation (lab_id);
 CREATE INDEX ix_reservation_user_id ON reservation (user_id);
 
-CREATE TABLE user_log (
+CREATE TABLE IF NOT EXISTS user_log (
     id INTEGER NOT NULL AUTO_INCREMENT COMMENT '日志ID',
     user_id INTEGER NOT NULL COMMENT '用户ID',
     operator_id INTEGER COMMENT '操作人ID',
@@ -135,7 +135,7 @@ CREATE INDEX ix_user_log_created_at ON user_log (created_at);
 CREATE INDEX ix_user_log_operator_id ON user_log (operator_id);
 CREATE INDEX ix_user_log_user_id ON user_log (user_id);
 
-CREATE TABLE approval (
+CREATE TABLE IF NOT EXISTS approval (
     id INTEGER NOT NULL AUTO_INCREMENT COMMENT 'ID',
     reservation_id INTEGER NOT NULL COMMENT '预约ID',
     approver_id INTEGER NOT NULL COMMENT '审批人ID',
@@ -151,7 +151,7 @@ CREATE TABLE approval (
 CREATE INDEX ix_approval_approver_id ON approval (approver_id);
 CREATE INDEX ix_approval_reservation_id ON approval (reservation_id);
 
-CREATE TABLE instrument_log (
+CREATE TABLE IF NOT EXISTS instrument_log (
     id INTEGER NOT NULL AUTO_INCREMENT COMMENT 'ID',
     instrument_id INTEGER NOT NULL COMMENT '仪器ID',
     operator_id INTEGER COMMENT '操作人ID',
@@ -176,7 +176,7 @@ CREATE INDEX ix_instrument_log_created_at ON instrument_log (created_at);
 CREATE INDEX ix_instrument_log_instrument_id ON instrument_log (instrument_id);
 CREATE INDEX ix_instrument_log_operator_id ON instrument_log (operator_id);
 
-CREATE TABLE notification (
+CREATE TABLE IF NOT EXISTS notification (
     id INTEGER NOT NULL AUTO_INCREMENT COMMENT 'ID',
     user_id INTEGER NOT NULL COMMENT '接收用户ID',
     title VARCHAR(100) NOT NULL COMMENT '标题',
@@ -189,7 +189,7 @@ CREATE TABLE notification (
     PRIMARY KEY (id)
 );
 
-CREATE TABLE agent_log (
+CREATE TABLE IF NOT EXISTS agent_log (
     id INTEGER NOT NULL AUTO_INCREMENT COMMENT 'ID',
     user_id INTEGER NOT NULL COMMENT '用户ID',
     input_message VARCHAR(500) NOT NULL COMMENT '用户输入摘要',
