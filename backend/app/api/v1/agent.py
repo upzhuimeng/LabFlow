@@ -32,6 +32,7 @@ async def build_suggestion_from_db(db: AsyncSession, user_message: str) -> dict 
     """当模型未返回结构化数据时，直接从数据库查询可用实验室"""
     from app.crud import lab as lab_crud
     from app.crud import reservation as reservation_crud
+    from datetime import timedelta
 
     keyword = None
     if "化学" in user_message:
@@ -49,9 +50,38 @@ async def build_suggestion_from_db(db: AsyncSession, user_message: str) -> dict 
         return None
 
     lab = labs[0]
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    default_start = today.replace(hour=9)
-    default_end = today.replace(hour=12)
+    now = datetime.now()
+    target_date = now.date()
+    current_hour = now.hour
+
+    if "明天" in user_message:
+        target_date = (now + timedelta(days=1)).date()
+        default_start = datetime.combine(target_date, datetime.min.time()).replace(
+            hour=11
+        )
+        default_end = datetime.combine(target_date, datetime.min.time()).replace(
+            hour=13
+        )
+    elif "后天" in user_message:
+        target_date = (now + timedelta(days=2)).date()
+        default_start = datetime.combine(target_date, datetime.min.time()).replace(
+            hour=11
+        )
+        default_end = datetime.combine(target_date, datetime.min.time()).replace(
+            hour=13
+        )
+    else:
+        if current_hour < 12:
+            default_start = now.replace(hour=11, minute=0, second=0, microsecond=0)
+            default_end = now.replace(hour=13, minute=0, second=0, microsecond=0)
+        elif current_hour < 17:
+            default_start = now.replace(hour=14, minute=0, second=0, microsecond=0)
+            default_end = now.replace(hour=17, minute=0, second=0, microsecond=0)
+        else:
+            tomorrow = now + timedelta(days=1)
+            target_date = tomorrow.date()
+            default_start = tomorrow.replace(hour=9, minute=0, second=0, microsecond=0)
+            default_end = tomorrow.replace(hour=12, minute=0, second=0, microsecond=0)
 
     conflicts = await reservation_crud.check_time_conflict(
         db, lab_id=lab.id, start_time=default_start, end_time=default_end
