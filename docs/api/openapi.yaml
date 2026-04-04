@@ -24,6 +24,12 @@ tags:
     description: 预约管理接口
   - name: Approval
     description: 审批管理接口
+  - name: Notification
+    description: 通知管理接口
+  - name: Agent
+    description: 智能助手接口
+  - name: Statistics
+    description: 统计报表接口
 
 paths:
   /auth/login:
@@ -399,9 +405,17 @@ paths:
           required: true
           schema:
             type: integer
+        - name: force
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: 强制删除，即使有有效预约
       responses:
         '200':
           description: 删除成功
+        '400':
+          description: 无法删除（有有效预约）
         '404':
           description: 实验室不存在
 
@@ -624,6 +638,11 @@ paths:
           schema:
             type: integer
             enum: [0, 1, 2, 3, 4]
+        - name: lab_id
+          in: query
+          schema:
+            type: integer
+          description: 按实验室ID筛选
       responses:
         '200':
           description: 成功
@@ -843,6 +862,331 @@ paths:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
 
+  /approvals/all:
+    get:
+      summary: 获取我负责的所有预约
+      description: 获取当前用户负责的实验室的所有预约（含已审批、已拒绝等）
+      tags:
+        - Approval
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  /notifications:
+    get:
+      summary: 获取通知列表
+      tags:
+        - Notification
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  /notifications/unread-count:
+    get:
+      summary: 获取未读通知数量
+      tags:
+        - Notification
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+              example:
+                code: 200
+                message: success
+                data:
+                  count: 5
+
+  /notifications/read-all:
+    put:
+      summary: 标记全部通知为已读
+      tags:
+        - Notification
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  /notifications/{notification_id}:
+    get:
+      summary: 获取通知详情
+      tags:
+        - Notification
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '404':
+          description: 通知不存在
+    delete:
+      summary: 删除通知
+      description: 软删除通知
+      tags:
+        - Notification
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 删除成功
+        '404':
+          description: 通知不存在
+
+  /notifications/{notification_id}/read:
+    put:
+      summary: 标记单条通知为已读
+      tags:
+        - Notification
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '404':
+          description: 通知不存在
+
+  /agent/reservation/assist:
+    post:
+      summary: 智能预约助手
+      description: 用户描述需求，返回推荐的实验室和时间段，结果发送到消息通知
+      tags:
+        - Agent
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  description: 用户的需求描述
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '429':
+          description: 请求过于频繁
+          content:
+            application/json:
+              example:
+                code: 429
+                message: 请求过于频繁，请在 10 分钟后再试
+                data: null
+
+  /agent/complete:
+    post:
+      summary: 标记对话为已完成
+      tags:
+        - Agent
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - log_id
+              properties:
+                log_id:
+                  type: integer
+                  description: 日志ID
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '404':
+          description: 对话不存在
+
+  /agent/abandon:
+    post:
+      summary: 标记对话为已放弃
+      tags:
+        - Agent
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - log_id
+              properties:
+                log_id:
+                  type: integer
+                  description: 日志ID
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '404':
+          description: 对话不存在
+
+  /agent/statistics/summarize:
+    post:
+      summary: AI 统计总结助手
+      description: 后台异步生成总结，完成后发送通知到用户消息信箱（仅管理员）
+      tags:
+        - Agent
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - report_data
+                - report_type
+              properties:
+                report_data:
+                  type: object
+                  description: 报表数据
+                report_type:
+                  type: string
+                  enum: [weekly, monthly]
+                  description: 报表类型
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '403':
+          description: 权限不足
+
+  /statistics/report:
+    get:
+      summary: 获取统计报表
+      description: 获取日报、周报或月报统计数据（仅管理员）
+      tags:
+        - Statistics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly]
+            default: daily
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: 开始日期 YYYY-MM-DD
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: 结束日期 YYYY-MM-DD
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '403':
+          description: 权限不足
+
+  /statistics/summary:
+    get:
+      summary: 获取总体统计摘要
+      description: 获取本月统计数据和热门实验室（仅管理员）
+      tags:
+        - Statistics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '403':
+          description: 权限不足
+
 components:
   schemas:
     BaseResponse:
@@ -968,14 +1312,26 @@ components:
           description: 容纳人数
         status:
           type: integer
-          enum: [0, 1, 2]
-          description: 状态 (0-正常, 1-维护, 2-停用)
+          enum: [0, 1, 2, 3]
+          description: 状态 (0-正常, 1-维护, 2-停用, 3-删除)
         keyword:
           type: string
           description: 关键词
         description:
           type: string
           description: 实验室说明
+        manager_user_id:
+          type: integer
+          nullable: true
+          description: 负责人用户ID
+        manager_name:
+          type: string
+          nullable: true
+          description: 负责人姓名
+        manager_phone:
+          type: string
+          nullable: true
+          description: 负责人电话
         created_at:
           type: string
           format: date-time
@@ -1011,6 +1367,7 @@ components:
           description: 实验室说明
         manager_user_id:
           type: integer
+          nullable: true
           description: 负责人用户ID（可选）
 
     LabUpdate:
@@ -1029,8 +1386,8 @@ components:
           description: 容纳人数
         status:
           type: integer
-          enum: [0, 1, 2]
-          description: 状态 (0-正常, 1-维护, 2-停用)
+          enum: [0, 1, 2, 3]
+          description: 状态 (0-正常, 1-维护, 2-停用, 3-删除)
         keyword:
           type: string
           maxLength: 255
@@ -1066,11 +1423,15 @@ components:
           description: 价格
         status:
           type: integer
-          enum: [0, 1, 2]
-          description: 状态 (0-正常, 1-维修, 2-停用)
+          enum: [0, 1, 2, 3]
+          description: 状态 (0-正常, 1-维修, 2-停用, 3-删除)
         lab_id:
           type: integer
           description: 所属实验室ID
+        lab_name:
+          type: string
+          nullable: true
+          description: 所属实验室名称
         remark:
           type: string
           description: 备注
@@ -1123,6 +1484,10 @@ components:
           type: string
           maxLength: 255
           description: 备注
+        status:
+          type: integer
+          enum: [0, 1, 2, 3]
+          description: 状态 (0-正常, 1-维修, 2-停用, 3-删除)
 
     InstrumentUpdate:
       type: object
@@ -1152,8 +1517,8 @@ components:
           description: 价格
         status:
           type: integer
-          enum: [0, 1, 2]
-          description: 状态 (0-正常, 1-维修, 2-停用)
+          enum: [0, 1, 2, 3]
+          description: 状态 (0-正常, 1-维修, 2-停用, 3-删除)
         lab_id:
           type: integer
           description: 所属实验室ID
@@ -1192,9 +1557,17 @@ components:
         user_name:
           type: string
           description: 申请人姓名
+        user_phone:
+          type: string
+          nullable: true
+          description: 申请人电话
         lab_name:
           type: string
           description: 实验室名称
+        approval_comment:
+          type: string
+          nullable: true
+          description: 审批意见
         created_at:
           type: string
           format: date-time
@@ -1315,6 +1688,40 @@ components:
         phone:
           type: string
           description: 用户电话
+
+    NotificationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 通知ID
+        user_id:
+          type: integer
+          description: 用户ID
+        title:
+          type: string
+          description: 通知标题
+        content:
+          type: string
+          description: 通知内容
+        notif_type:
+          type: integer
+          description: 通知类型 (1-系统, 2-预约, 3-仪器, 4-智能助手, 5-统计)
+        is_read:
+          type: boolean
+          description: 是否已读
+        related_id:
+          type: integer
+          nullable: true
+          description: 关联ID
+        attachment:
+          type: string
+          nullable: true
+          description: 附件数据(JSON)
+        created_at:
+          type: string
+          format: date-time
+          description: 创建时间
 
     PermissionResponse:
       type: object
