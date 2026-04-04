@@ -3,6 +3,7 @@
 # Description: 智能助手 API 路由
 
 import json
+import re
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
@@ -65,6 +66,8 @@ async def assist_reservation(
     active_log = await agent_log_crud.get_active_log(db, current_user.id)
     if active_log:
         context_data = load_context(active_log.context_file)
+        if context_data is None:
+            context_data = {"messages": []}
     else:
         context_data = {"messages": []}
 
@@ -142,6 +145,40 @@ async def assist_reservation(
                 content=f"已为您找到合适的实验室：{agent_output.lab_name}",
                 notif_type=NOTIF_TYPE_AGENT_RESULT,
                 related_id=agent_output.lab_id,
+                attachment=suggestion_json,
+            )
+            return BaseResponse(
+                data={
+                    "success": True,
+                    "message": "推荐结果已发送到您的消息通知，请查收",
+                    "log_id": log_id,
+                }
+            )
+        elif agent_output.lab_name and agent_output.reason:
+            lab_name = agent_output.lab_name
+            reason = agent_output.reason
+            time_match = re.search(r"(\d{4}-\d{2}-\d{2}[T\s]?\d{2}:\d{2})", reason)
+            start_time = time_match.group(1) if time_match else ""
+            end_time = ""
+            if start_time:
+                end_match = re.search(r"~(\d{4}-\d{2}-\d{2}[T\s]?\d{2}:\d{2})", reason)
+                end_time = end_match.group(1) if end_match else ""
+            suggestion = {
+                "lab_id": None,
+                "lab_name": lab_name,
+                "address": agent_output.address or "",
+                "start_time": start_time,
+                "end_time": end_time,
+                "reason": reason,
+                "purpose": agent_output.purpose or "",
+            }
+            suggestion_json = json.dumps(suggestion, ensure_ascii=False)
+            await notification_crud.create_notification(
+                db,
+                user_id=current_user.id,
+                title="智能推荐结果",
+                content=f"已为您找到合适的实验室：{lab_name}",
+                notif_type=NOTIF_TYPE_AGENT_RESULT,
                 attachment=suggestion_json,
             )
             return BaseResponse(
