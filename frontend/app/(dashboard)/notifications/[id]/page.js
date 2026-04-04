@@ -105,12 +105,6 @@ function AgentRecommendationCard({ data }) {
         >
           确认预约
         </button>
-        <button
-          onClick={() => toast.info('功能开发中，敬请期待')}
-          className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 text-sm"
-        >
-          还有问题？
-        </button>
       </div>
     </div>
   );
