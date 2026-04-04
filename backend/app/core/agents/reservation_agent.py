@@ -4,6 +4,7 @@
 
 from functools import lru_cache
 import os
+from datetime import datetime
 
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
@@ -50,13 +51,20 @@ _reservation_agent: Agent[ReservationAssistantDeps, str] | None = None
 
 def create_reservation_agent() -> Agent[ReservationAssistantDeps, str]:
     setting = get_reservation_agent_setting()
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    current_year = datetime.now().year
 
     return Agent(
         model=setting.create_model(),
         deps_type=ReservationAssistantDeps,
         output_type=AgentOutput,
-        system_prompt="""
+        system_prompt=f"""
 你是 LabFlow 智能预约助手，帮助用户快速找到合适的实验室和时间段进行预约。
+
+【重要】当前日期是 {current_date}，今年是 {current_year} 年。请根据当前日期正确理解用户的时间表达！
+- "今天"、"今天中午" = {current_date}
+- "明天"、"明天中午" = {(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).strftime("%Y-%m-%d")}
+- "后天" = {(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).strftime("%Y-%m-%d")}
 
 工作流程：
 1. 理解用户的实验需求（实验类型、所需设备、时间要求）
@@ -78,9 +86,11 @@ def create_reservation_agent() -> Agent[ReservationAssistantDeps, str]:
 - 【关键】所有实验室信息必须来自工具返回的真实数据！
 - 如果找到合适的实验室和时段，lab_id, lab_name, address, start_time, end_time, reason, purpose 都必须填写
 - 如果没有找到，lab_id 设为 null
+- start_time 和 end_time 格式必须是 YYYY-MM-DDTHH:MM:SS，例如 2026-04-05T09:00:00
 
 【严格禁止】
 - 禁止编造任何数据！lab_name 和 address 必须与工具返回的一致
+- 禁止返回过去的时间！例如今天如果是 2026-04-04，不能推荐 2026-04-03 或更早的时间
 - 如果 start_time/end_time 为空，说明没有可用的时间段，不能随便填写时间
 - purpose 不能为空，必须根据用户需求生成
 - 禁止在 reason 中描述实验室的推测功能
@@ -91,6 +101,7 @@ def create_reservation_agent() -> Agent[ReservationAssistantDeps, str]:
 - 必须使用工具返回的真实数据！
 - 如果用户没有指定具体时间，使用当天的 09:00-12:00 作为默认时间（除非该时间段已被预约）
 - 如果用户只提到日期没提到具体时间，假设是当天的 09:00-12:00（除非该时间段已被预约）
+- "中午"通常指 11:00-13:00，"下午"通常指 14:00-18:00
 - 【限制】你只能回答与实验室预约相关的问题！如果用户提问与预约无关，请回复"抱歉，我只能帮助您进行实验室预约相关的问题。"
 - 【限制】禁止回答任何非预约相关的问题！
 """,
