@@ -109,7 +109,7 @@ export default function UserPage() {
   const getStatusBadge = (status) => {
     const s = status ?? 0;
     return (
-      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_BADGE_CLASS[s] || STATUS_BADGE_CLASS[0]}`}>
+      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_BADGE_CLASS[s] || STATUS_BADGE_CLASS[0]}`}>
         {STATUS_TEXT.USER[s] || '未知'}
       </span>
     );
@@ -117,7 +117,7 @@ export default function UserPage() {
 
   const getRoleBadge = (role) => {
     return (
-      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${ROLE_BADGE_CLASS[role] || ROLE_BADGE_CLASS[2]}`}>
+      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${ROLE_BADGE_CLASS[role] || ROLE_BADGE_CLASS[2]}`}>
         {ROLE_TEXT[role] || '未知'}
       </span>
     );
@@ -245,8 +245,8 @@ export default function UserPage() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">角色</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">角色</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">状态</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">手机</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
@@ -268,16 +268,16 @@ export default function UserPage() {
                         <p className="text-xs text-gray-500">{user.email}</p>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 min-w-[80px]">
                       {getRoleBadge(user.role)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 min-w-[80px]">
                       {getStatusBadge(user.is_active)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {user.phone || '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {user.created_at?.split('T')[0] || '-'}
                     </td>
                     <td className="px-4 py-3 text-right">
