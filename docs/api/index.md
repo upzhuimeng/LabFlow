@@ -4,12 +4,27 @@
 
 LabFlow 实验室管理系统后端 API 文档，基于 OpenAPI 3.0 标准。
 
+## API Documentation
+
+完整 API 文档请查看：[`openapi.yaml`](./openapi.yaml)
+
+该文件包含所有 API 端点的详细定义，包括：
+- Auth API - 认证接口
+- User API - 用户管理
+- User API - 用户管理
+- Lab API - 实验室管理
+- Instrument API - 仪器管理
+- Reservation API - 预约管理
+- Approval API - 审批管理
+
+---
+
 ## Base Information
 
 - **Base URL**: `http://localhost:8000`
-- **认证方式**: JWT Token (HttpOnly Cookie)
+- **认证方式**: JWT Token (Bearer Token)
 - **请求格式**: JSON
-- **响应格式**: 
+- **响应格式**:
 ```json
 {
   "code": 200,
@@ -34,17 +49,7 @@ LabFlow 实验室管理系统后端 API 文档，基于 OpenAPI 3.0 标准。
 | Header | Required | Description |
 |--------|----------|-------------|
 | Content-Type | Yes | application/json |
-| Cookie | Yes (after login) | JWT Token (HttpOnly) |
-
-## Table of Contents
-
-1. [Auth API](./auth.yaml) - 认证接口 (登录/注册/登出)
-2. [User API](./user.yaml) - 用户管理
-3. [Lab API](./lab.yaml) - 实验室管理
-4. [Instrument API](./instrument.yaml) - 仪器管理
-5. [Reservation API](./reservation.yaml) - 预约管理
-6. [Tag API](./tag.yaml) - 标签管理
-7. [Approval API](./approval.yaml) - 审批管理
+| Authorization | Yes (after login) | Bearer Token |
 
 ---
 
@@ -79,14 +84,6 @@ LabFlow 实验室管理系统后端 API 文档，基于 OpenAPI 3.0 标准。
 | 2 | 拒绝 |
 | 3 | 已取消 |
 
-### Reservation Current Level (预约审批阶段)
-| 值 | 说明 |
-|----|------|
-| 0 | 未申请 |
-| 1 | 一级审批中 |
-| 2 | 二级审批中 |
-| 3 | 全部通过 |
-
 ### Approval Status (审批状态)
 | 值 | 说明 |
 |----|------|
@@ -95,4 +92,4 @@ LabFlow 实验室管理系统后端 API 文档，基于 OpenAPI 3.0 标准。
 
 ---
 
-*最后更新: 2026-03-30*
+*最后更新: 2026-04-04*
