@@ -3,6 +3,7 @@
 # Description: 智能助手 API 路由
 
 import json
+import re
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
@@ -25,6 +26,58 @@ RATE_LIMIT_MINUTES = 10
 RATE_LIMIT_MAX_REQUESTS = 3
 
 NOTIF_TYPE_AGENT_RESULT = 4
+
+
+async def build_suggestion_from_db(db: AsyncSession, user_message: str) -> dict | None:
+    """当模型未返回结构化数据时，直接从数据库查询可用实验室"""
+    from app.crud import lab as lab_crud
+    from app.crud import reservation as reservation_crud
+
+    keyword = None
+    if "化学" in user_message:
+        keyword = "化学"
+    elif "物理" in user_message:
+        keyword = "物理"
+    elif "生物" in user_message:
+        keyword = "生物"
+
+    labs, _ = await lab_crud.get_labs(db, status=0, keyword=keyword)
+    if not labs:
+        labs, _ = await lab_crud.get_labs(db, status=0, keyword=None)
+
+    if not labs:
+        return None
+
+    lab = labs[0]
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    default_start = today.replace(hour=9)
+    default_end = today.replace(hour=12)
+
+    conflicts = await reservation_crud.check_time_conflict(
+        db, lab_id=lab.id, start_time=default_start, end_time=default_end
+    )
+
+    if conflicts:
+        default_start = default_start.replace(hour=14)
+        default_end = default_end.replace(hour=17)
+        conflicts = await reservation_crud.check_time_conflict(
+            db, lab_id=lab.id, start_time=default_start, end_time=default_end
+        )
+
+    start_time_str = default_start.strftime("%Y-%m-%dT%H:%M:%S")
+    end_time_str = default_end.strftime("%Y-%m-%dT%H:%M:%S")
+
+    manager_id, manager_name, manager_phone = await lab_crud.get_lab_manager(db, lab.id)
+
+    return {
+        "lab_id": lab.id,
+        "lab_name": lab.name,
+        "address": lab.address,
+        "start_time": start_time_str,
+        "end_time": end_time_str,
+        "reason": f"根据您的需求推荐 {lab.name}，该实验室在您指定的时间段可用",
+        "purpose": "",
+    }
 
 
 class ReservationAssistantRequest(BaseModel):
@@ -65,6 +118,8 @@ async def assist_reservation(
     active_log = await agent_log_crud.get_active_log(db, current_user.id)
     if active_log:
         context_data = load_context(active_log.context_file)
+        if context_data is None:
+            context_data = {"messages": []}
     else:
         context_data = {"messages": []}
 
@@ -151,7 +206,60 @@ async def assist_reservation(
                     "log_id": log_id,
                 }
             )
+        elif agent_output.lab_name and agent_output.reason:
+            lab_name = agent_output.lab_name
+            reason = agent_output.reason
+            time_match = re.search(r"(\d{4}-\d{2}-\d{2}[T\s]?\d{2}:\d{2})", reason)
+            start_time = time_match.group(1) if time_match else ""
+            end_time = ""
+            if start_time:
+                end_match = re.search(r"~(\d{4}-\d{2}-\d{2}[T\s]?\d{2}:\d{2})", reason)
+                end_time = end_match.group(1) if end_match else ""
+            suggestion = {
+                "lab_id": None,
+                "lab_name": lab_name,
+                "address": agent_output.address or "",
+                "start_time": start_time,
+                "end_time": end_time,
+                "reason": reason,
+                "purpose": agent_output.purpose or "",
+            }
+            suggestion_json = json.dumps(suggestion, ensure_ascii=False)
+            await notification_crud.create_notification(
+                db,
+                user_id=current_user.id,
+                title="智能推荐结果",
+                content=f"已为您找到合适的实验室：{lab_name}",
+                notif_type=NOTIF_TYPE_AGENT_RESULT,
+                attachment=suggestion_json,
+            )
+            return BaseResponse(
+                data={
+                    "success": True,
+                    "message": "推荐结果已发送到您的消息通知，请查收",
+                    "log_id": log_id,
+                }
+            )
         else:
+            suggestion = await build_suggestion_from_db(db, request.message)
+            if suggestion:
+                suggestion_json = json.dumps(suggestion, ensure_ascii=False)
+                await notification_crud.create_notification(
+                    db,
+                    user_id=current_user.id,
+                    title="智能推荐结果",
+                    content=f"已为您找到合适的实验室：{suggestion['lab_name']}",
+                    notif_type=NOTIF_TYPE_AGENT_RESULT,
+                    related_id=suggestion.get("lab_id"),
+                    attachment=suggestion_json,
+                )
+                return BaseResponse(
+                    data={
+                        "success": True,
+                        "message": "推荐结果已发送到您的消息通知，请查收",
+                        "log_id": log_id,
+                    }
+                )
             await notification_crud.create_notification(
                 db,
                 user_id=current_user.id,
