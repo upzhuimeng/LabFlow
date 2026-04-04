@@ -79,3 +79,41 @@
 | 超级管理员 | SuperAdmin@LabFlow.org | Admin123! |
 | 管理员 | 13800000001 | User123! |
 | 实验员 | 13800000002 ~ 13800000007 | User123! |
+
+---
+
+## 部署
+
+### Nginx 配置
+
+参考 [`scripts/nginx/`](https://github.com/zhuimeng-hstc/LabFlow/tree/main/scripts/nginx) 目录下的配置文件：
+
+- `dev.conf` - 开发环境配置
+- `prod.conf` - 生产环境配置
+
+### 安全要求
+
+**必须使用 HTTPS 访问**
+
+系统前后端通过 HTTP 明文传输数据（Cookie 中的 JWT Token 等敏感信息），**必须通过 HTTPS 加密传输**，否则存在安全风险。
+
+#### HTTP 强制重定向到 HTTPS
+
+在 Nginx 配置中取消注释 HTTP server 块以启用强制跳转：
+
+```nginx
+server {
+    listen 80;
+    server_name labflow.example.com;
+    return 301 https://$server_name$request_uri;
+}
+```
+
+#### SSL 证书
+
+生产环境建议使用 Let's Encrypt 或其他可信机构颁发的证书：
+
+```bash
+# 使用 certbot 自动申请和续期
+sudo certbot --nginx -d labflow.example.com
+```
