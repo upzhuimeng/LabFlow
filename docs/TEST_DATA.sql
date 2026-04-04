@@ -4,6 +4,7 @@
 -- ================================================
 
 SET NAMES utf8mb4;
+USE labflow;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- --------------------------------------------------------
@@ -220,7 +221,7 @@ INSERT INTO notification (id, user_id, title, content, type, related_id, is_read
 
 -- --------------------------------------------------------
 -- User Logs (sample activity logs)
--- Note: operator_id=1 represents system/superadmin action
+-- Note: operator_id=1 represents user_id=1 (张明, admin) as operator
 -- --------------------------------------------------------
 
 INSERT INTO user_log (user_id, operator_id, action, name, `role`, phone, email, is_active, created_at) VALUES
