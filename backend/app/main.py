@@ -27,7 +27,19 @@ app = FastAPI(title="LabFlow", version="0.1.0")
 @app.get("/health")
 async def health_check():
     """健康检查端点"""
-    return {"status": "ok", "service": "LabFlow"}
+    from sqlalchemy import text
+    from app.db.session import engine
+
+    status = {"service": "LabFlow", "status": "ok", "database": "ok"}
+
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except Exception as e:
+        status["status"] = "error"
+        status["database"] = f"error: {str(e)}"
+
+    return status
 
 
 app.add_middleware(

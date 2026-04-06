@@ -25,8 +25,11 @@ export default function LoginPage() {
         const checkHealth = async () => {
             try {
                 const res = await fetch('http://localhost:8000/health');
-                if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'ok' && data.database === 'ok') {
                     setSystemStatus({ ok: true, message: '系统运行正常' });
+                } else if (data.status === 'error' && data.database) {
+                    setSystemStatus({ ok: false, message: '数据库连接失败' });
                 } else {
                     setSystemStatus({ ok: false, message: '后端服务异常' });
                 }
