@@ -14,8 +14,11 @@ LabFlow 智序是一款面向实验室的智能管理系统，提供实验室预
 |----|------|
 | 前端 | Next.js 16 + React 19 + TailwindCSS 4 |
 | 后端 | FastAPI + SQLAlchemy 2.0 (async) + MySQL 8 |
-| AI | Pydantic AI (智能预约助手) |
+| AI | Pydantic_ai (智能预约助手、AI数据总结)  |
 
+> [!Note]
+> 
+> 附: Pydantic_ai 简要说明文档: [docs/AI_ASSISTANT_INTEGRATION.md](docs/AI_ASSISTANT_INTEGRATION.md)
 ---
 
 ## 功能特性
@@ -33,7 +36,7 @@ LabFlow 智序是一款面向实验室的智能管理系统，提供实验室预
 
 | 角色 | 说明 |
 |------|------|
-| 超级管理员 | 系统最高权限，可设置管理员 |
+| 超级管理员 | 系统最高权限，可设置管理员(主要用于初次数据导入) |
 | 管理员 | 管理实验室、仪器、用户 |
 | 实验员 | 查看并预约实验室、使用仪器 |
 
@@ -134,9 +137,13 @@ npm run dev
 
 ## 数据库
 
-### 表结构
+### 数据库建表
 
-详见 [docs/SQL_Latest.md](docs/SQL_Latest.md)
+文件 [docs/DATABASE_SCHEMA.sql](docs/DATABASE_SCHEMA.sql)
+
+### 测试数据
+
+文件 [docs/TEST_DATA.sql](docs/TEST_DATA.sql)
 
 ### 状态值说明
 
@@ -188,13 +195,6 @@ pyright                # 类型检查
 cd frontend
 npm run lint           # 检查
 ```
-
-### Git 规范
-
-- 分支: `main` (稳定), `dev` (开发), `feat/`, `fix/`
-- 提交: `feat(module): description`
-
----
 
 ## License
 
