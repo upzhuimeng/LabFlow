@@ -1,4 +1,4 @@
-# Description: Pydantic AI 集成指南 - 智能预约助手
+# Pydantic AI 集成指南 - 智能预约助手
 
 ## 目录
 1. [概述](#1-概述)
