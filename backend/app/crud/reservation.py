@@ -57,8 +57,13 @@ async def get_all_reservations(
     limit: int = 100,
     status: int | None = None,
     lab_id: int | None = None,
+    active_only: bool = False,
 ) -> Tuple[List[Reservation], int]:
-    """获取所有预约（管理员用）"""
+    """获取所有预约（管理员用）
+
+    Args:
+        active_only: 如果为 True，只返回尚未结束的预约（end_time > now）
+    """
     query = select(Reservation).where(Reservation.is_deleted == 0)
 
     if status is not None:
@@ -66,6 +71,9 @@ async def get_all_reservations(
 
     if lab_id is not None:
         query = query.where(Reservation.lab_id == lab_id)
+
+    if active_only:
+        query = query.where(Reservation.end_time > datetime.now())
 
     total_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(total_query)
@@ -161,14 +169,16 @@ async def check_time_conflict(
 
 
 async def get_active_reservations_by_lab(
-    db: AsyncSession, lab_id: int
+    db: AsyncSession, lab_id: int, active_only: bool = True
 ) -> List[Reservation]:
-    """获取实验室的有效预约（审批中或已通过）"""
+    """获取实验室的有效预约（审批中或已通过，且尚未结束）"""
     query = select(Reservation).where(
         Reservation.lab_id == lab_id,
         Reservation.is_deleted == 0,
         Reservation.status.in_([0, 1]),
     )
+    if active_only:
+        query = query.where(Reservation.end_time > datetime.now())
     result = await db.execute(query)
     return list(result.scalars().all())
 
