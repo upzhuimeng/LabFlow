@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# File: PYDANTIC_AI_GUIDE.md
 # Description: Pydantic AI 集成指南 - 智能预约助手
 
 ## 目录
