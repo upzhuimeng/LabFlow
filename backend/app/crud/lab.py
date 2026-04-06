@@ -35,7 +35,10 @@ async def get_labs(
         query = query.where(Lab.status != 3)
 
     if keyword and keyword.strip():
-        query = query.where(Lab.name.ilike(f"%{keyword}%"))
+        pattern = f"%{keyword}%"
+        query = query.where(
+            (Lab.name.ilike(pattern)) | (Lab.description.ilike(pattern))
+        )
 
     total_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(total_query)

@@ -10,11 +10,11 @@ from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 
 from app.agent.schemas.deps import ReservationAssistantDeps
-from app.agent.schemas.reservation_assistant import AgentOutput
 from app.agent.tools import (
     search_labs,
     check_availability,
     search_labs_by_instrument,
+    get_date_info,
 )
 from app.core.validators import Validator
 
@@ -51,61 +51,41 @@ _reservation_agent: Agent[ReservationAssistantDeps, str] | None = None
 
 def create_reservation_agent() -> Agent[ReservationAssistantDeps, str]:
     setting = get_reservation_agent_setting()
-    current_date = datetime.now().strftime("%Y-%m-%d")
-    current_year = datetime.now().year
+    now = datetime.now()
+    current_date = now.strftime("%Y-%m-%d")
+    current_year = now.year
+    tomorrow_date = (now + __import__("datetime").timedelta(days=1)).strftime(
+        "%Y-%m-%d"
+    )
 
     return Agent(
         model=setting.create_model(),
         deps_type=ReservationAssistantDeps,
-        output_type=AgentOutput,
+        output_type=str,
         system_prompt=f"""
-你是 LabFlow 智能预约助手，帮助用户快速找到合适的实验室和时间段进行预约。
+你是 LabFlow 智能预约助手，帮助用户预约实验室。
 
-【重要】当前日期是 {current_date}，今年是 {current_year} 年。请根据当前日期正确理解用户的时间表达！
-- "今天"、"今天中午" = {current_date}
-- "明天"、"明天中午" = {(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).strftime("%Y-%m-%d")}
-- "后天" = {(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).strftime("%Y-%m-%d")}
+当前日期：{current_date}，明天日期：{tomorrow_date}，今年是 {current_year} 年。
 
-工作流程：
-1. 理解用户的实验需求（实验类型、所需设备、时间要求）
-2. 如果用户提到特定设备（如"磁力搅拌器"、"烘箱"、"离心机"等），使用 search_labs_by_instrument 搜索拥有该设备的实验室
-3. 如果用户提到关键词（如"化学"、"物理"、"生物"等），使用 search_labs 搜索符合条件的实验室
-4. 检查用户指定的时间段是否可用（使用 check_availability）
-5. 【重要】只有当 check_availability 返回 available=True 时才能推荐该时间段！
-6. 找到可用的时间段后，立即输出推荐结果，不要再调用其他工具！
+【重要】你必须按顺序执行：
+1. 首先调用 get_date_info 获取日期信息
+2. 调用 search_labs 或 search_labs_by_instrument 搜索实验室
+3. 调用 check_availability 验证时间段
+4. 只有 available=True 才能推荐
 
-可用工具：
-- search_labs: 搜索实验室（返回 lab_id, name, address, capacity, description）
-- search_labs_by_instrument: 根据仪器设备名称搜索拥有该设备的实验室
-- check_availability: 检查指定时间段是否可用（参数：lab_id, date格式YYYY-MM-DD, start_hour, end_hour）
-  - 返回 available=True 表示可用，可以推荐
-  - 返回 available=False 表示不可用
+【输出要求】
+完成搜索和验证后，输出一行 JSON（不要其他内容）：
+{{"lab_id":1,"lab_name":"实验室名称","address":"地址","start_time":"2026-04-08T14:00:00","end_time":"2026-04-08T18:00:00","reason":"推荐理由","purpose":"用途"}}
 
-输出格式：
-- 你必须返回一个结构化的推荐结果
-- 【关键】所有实验室信息必须来自工具返回的真实数据！
-- 如果找到合适的实验室和时段，lab_id, lab_name, address, start_time, end_time, reason, purpose 都必须填写
-- 如果没有找到，lab_id 设为 null
-- start_time 和 end_time 格式必须是 YYYY-MM-DDTHH:MM:SS，例如 2026-04-05T09:00:00
+如果找不到可用实验室：{{"lab_id":null}}
 
-【严格禁止】
-- 禁止编造任何数据！lab_name 和 address 必须与工具返回的一致
-- 禁止返回过去的时间！例如今天如果是 2026-04-04，不能推荐 2026-04-03 或更早的时间
-- 如果 start_time/end_time 为空，说明没有可用的时间段，不能随便填写时间
-- purpose 不能为空，必须根据用户需求生成
-- 禁止在 reason 中描述实验室的推测功能
-
-注意事项：
-- 【最重要】只有 check_availability 返回 available=True 时才能推荐！
-- 如果用户指定的时间段不可用，必须明确告知用户并提供替代方案
-- 必须使用工具返回的真实数据！
-- 如果用户没有指定具体时间，使用当天的 09:00-12:00 作为默认时间（除非该时间段已被预约）
-- 如果用户只提到日期没提到具体时间，假设是当天的 09:00-12:00（除非该时间段已被预约）
-- "中午"通常指 11:00-13:00，"下午"通常指 14:00-18:00
-- 【限制】你只能回答与实验室预约相关的问题！如果用户提问与预约无关，请回复"抱歉，我只能帮助您进行实验室预约相关的问题。"
-- 【限制】禁止回答任何非预约相关的问题！
+【禁止】
+- 不要编造实验室信息
+- 不要返回过去的时间
+- 未经搜索直接输出结果
 """,
         tools=[
+            get_date_info,
             search_labs,
             search_labs_by_instrument,
             check_availability,

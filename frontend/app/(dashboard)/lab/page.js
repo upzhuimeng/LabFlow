@@ -340,7 +340,8 @@ export default function LabPage() {
                           const instruments = instRes.data?.items || [];
                           const pending = res0Res.data?.items || [];
                           const approved = res1Res.data?.items || [];
-                          const allReservations = [...pending, ...approved];
+                          const now = new Date();
+                          const allReservations = [...pending, ...approved].filter(r => new Date(r.end_time) >= now);
                           setDeleteInstruments(instruments);
                           setDeleteReservations(allReservations);
                         } catch (err) {
@@ -359,7 +360,7 @@ export default function LabPage() {
                 ) : null}
                 {lab.status === 0 && !isAdmin && (
                   <button
-                    onClick={() => handleReserve(lab)}
+                    onClick={(e) => { e.stopPropagation(); handleReserve(lab); }}
                     className="px-3 py-1.5 text-sm border border-blue-200 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
                   >
                     预约

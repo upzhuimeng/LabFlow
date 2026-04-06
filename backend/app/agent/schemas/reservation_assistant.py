@@ -75,3 +75,24 @@ class AgentOutput(BaseModel):
     )
     reason: str = Field(description="推荐理由或未找到原因")
     purpose: str | None = Field(description="预约用途说明，找不到时为null")
+
+
+class UserIntent(BaseModel):
+    """用户预约意图解析结果"""
+
+    keyword: str | None = Field(
+        description="实验室类型关键词，如化学、物理、生物等", default=None
+    )
+    equipment: str | None = Field(
+        description="所需仪器设备，如烘箱、离心机等", default=None
+    )
+    date: str | None = Field(
+        description="预约日期，如2026-04-08或today/tomorrow", default=None
+    )
+    start_hour: int | None = Field(
+        description="开始小时，24小时制，如14表示下午2点", default=None
+    )
+    end_hour: int | None = Field(
+        description="结束小时，24小时制，如17表示下午5点", default=None
+    )
+    purpose: str | None = Field(description="预约用途/实验内容", default=None)

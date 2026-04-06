@@ -101,7 +101,7 @@ export default function LabDetailPage() {
         </div>
         <div className="border-t border-gray-300/50 my-6"></div>
         <div className="flex gap-3 mt-6 justify-end">
-          {!isAdmin && (
+          {!isAdmin && lab.status === 0 && (
             <button
               onClick={() => router.push(`/reservation/my?lab_id=${lab.id}`)}
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"

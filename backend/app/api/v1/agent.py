@@ -3,21 +3,28 @@
 # Description: 智能助手 API 路由
 
 import json
-import re
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field
+import logging
 from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_current_user
 from app.agent.schemas.deps import ReservationAssistantDeps
 from app.core.agents.reservation_agent import get_reservation_agent
 from app.core.agents.statistics_agent import get_statistics_agent
+from app.core.agents.intent_parser import get_intent_parser
 from app.models.user import User
 from app.schemas.base import BaseResponse
 from app.crud import agent_log as agent_log_crud
 from app.crud import notification as notification_crud
 from app.utils.context_storage import save_context, load_context
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/api/v1/agent", tags=["智能助手"])
@@ -26,86 +33,102 @@ RATE_LIMIT_MINUTES = 10
 RATE_LIMIT_MAX_REQUESTS = 3
 
 NOTIF_TYPE_AGENT_RESULT = 4
+MAX_VALIDATION_ERRORS = 3
+
+
+def _parse_intent_json(text: str) -> dict:
+    """解析意图解析器的 JSON 输出"""
+    import re
+    import json
+
+    json_match = re.search(r"\{[^{}]*\}", text)
+    if not json_match:
+        return {}
+
+    try:
+        data = json.loads(json_match.group())
+        return {
+            "keyword": data.get("keyword"),
+            "equipment": data.get("equipment"),
+            "date": data.get("date"),
+            "start_hour": data.get("start_hour"),
+            "end_hour": data.get("end_hour"),
+            "purpose": data.get("purpose"),
+        }
+    except json.JSONDecodeError:
+        return {}
+
+
+def validate_and_parse_agent_output(
+    text_output: str,
+) -> tuple[bool, dict, str]:
+    """验证并解析 Agent 文本输出
+
+    Returns:
+        (is_valid, parsed_data, error_message)
+    """
+    import re
+    import json
+    from datetime import datetime
+
+    try:
+        json_match = re.search(r'\{[^{}]*"lab_id"[^{}]*\}', text_output)
+        if not json_match:
+            return False, {}, "输出格式错误：未找到有效 JSON"
+
+        data = json.loads(json_match.group())
+
+        lab_id = data.get("lab_id")
+        lab_name = data.get("lab_name")
+        _address = data.get("address")
+        start_time = data.get("start_time")
+        end_time = data.get("end_time")
+        _reason = data.get("reason", "")
+        _purpose = data.get("purpose")
+
+        if lab_id is not None:
+            if not start_time or not end_time:
+                return False, {}, "输出错误：指定了实验室但缺少时间范围"
+            try:
+                start = datetime.strptime(start_time, "%Y-%m-%dT%H:%M:%S")
+                end = datetime.strptime(end_time, "%Y-%m-%dT%H:%M:%S")
+                if end <= start:
+                    return False, {}, "输出错误：结束时间早于或等于开始时间"
+                if start < datetime.now():
+                    return False, {}, "输出错误：开始时间为过去时间"
+            except ValueError as e:
+                return False, {}, f"输出错误：时间格式错误 - {e}"
+
+        if lab_id is None and lab_name:
+            return False, {}, "输出错误：返回了实验室名称但未提供实验室ID"
+
+        return True, data, ""
+
+    except json.JSONDecodeError as e:
+        return False, {}, f"JSON 解析错误: {e}"
+    except Exception as e:
+        return False, {}, f"解析错误: {e}"
 
 
 async def build_suggestion_from_db(db: AsyncSession, user_message: str) -> dict | None:
-    """当模型未返回结构化数据时，直接从数据库查询可用实验室"""
+    """当模型未返回结构化数据时，直接查询一个正常状态的实验室供用户参考"""
     from app.crud import lab as lab_crud
-    from app.crud import reservation as reservation_crud
-    from datetime import timedelta
 
-    keyword = None
-    if "化学" in user_message:
-        keyword = "化学"
-    elif "物理" in user_message:
-        keyword = "物理"
-    elif "生物" in user_message:
-        keyword = "生物"
-
-    labs, _ = await lab_crud.get_labs(db, status=0, keyword=keyword)
-    if not labs:
-        labs, _ = await lab_crud.get_labs(db, status=0, keyword=None)
-
+    labs, _ = await lab_crud.get_labs(db, status=0, keyword=None, limit=1)
     if not labs:
         return None
 
     lab = labs[0]
     now = datetime.now()
-    target_date = now.date()
-    current_hour = now.hour
-
-    if "明天" in user_message:
-        target_date = (now + timedelta(days=1)).date()
-        default_start = datetime.combine(target_date, datetime.min.time()).replace(
-            hour=11
-        )
-        default_end = datetime.combine(target_date, datetime.min.time()).replace(
-            hour=13
-        )
-    elif "后天" in user_message:
-        target_date = (now + timedelta(days=2)).date()
-        default_start = datetime.combine(target_date, datetime.min.time()).replace(
-            hour=11
-        )
-        default_end = datetime.combine(target_date, datetime.min.time()).replace(
-            hour=13
-        )
-    else:
-        if current_hour < 12:
-            default_start = now.replace(hour=11, minute=0, second=0, microsecond=0)
-            default_end = now.replace(hour=13, minute=0, second=0, microsecond=0)
-        elif current_hour < 17:
-            default_start = now.replace(hour=14, minute=0, second=0, microsecond=0)
-            default_end = now.replace(hour=17, minute=0, second=0, microsecond=0)
-        else:
-            tomorrow = now + timedelta(days=1)
-            target_date = tomorrow.date()
-            default_start = tomorrow.replace(hour=9, minute=0, second=0, microsecond=0)
-            default_end = tomorrow.replace(hour=12, minute=0, second=0, microsecond=0)
-
-    conflicts = await reservation_crud.check_time_conflict(
-        db, lab_id=lab.id, start_time=default_start, end_time=default_end
-    )
-
-    if conflicts:
-        default_start = default_start.replace(hour=14)
-        default_end = default_end.replace(hour=17)
-        conflicts = await reservation_crud.check_time_conflict(
-            db, lab_id=lab.id, start_time=default_start, end_time=default_end
-        )
-
-    start_time_str = default_start.strftime("%Y-%m-%dT%H:%M:%S")
-    end_time_str = default_end.strftime("%Y-%m-%dT%H:%M:%S")
-
-    manager_id, manager_name, manager_phone = await lab_crud.get_lab_manager(db, lab.id)
+    today = now.date().isoformat()
 
     return {
         "lab_id": lab.id,
         "lab_name": lab.name,
         "address": lab.address,
-        "start_time": start_time_str,
-        "end_time": end_time_str,
-        "reason": f"根据您的需求推荐 {lab.name}，该实验室在您指定的时间段可用",
+        "start_time": f"{today}T09:00:00",
+        "end_time": f"{today}T12:00:00",
+        "reason": f"根据您的需求推荐 {lab.name}，建议您查看具体可用时间",
         "purpose": "",
     }
 
@@ -149,9 +172,9 @@ async def assist_reservation(
     if active_log:
         context_data = load_context(active_log.context_file)
         if context_data is None:
-            context_data = {"messages": []}
+            context_data = {"messages": [], "validation_errors": 0}
     else:
-        context_data = {"messages": []}
+        context_data = {"messages": [], "validation_errors": 0}
 
     context_data.setdefault("messages", []).append(
         {
@@ -161,6 +184,8 @@ async def assist_reservation(
         }
     )
 
+    validation_errors = context_data.get("validation_errors", 0)
+
     deps = ReservationAssistantDeps(
         user_id=current_user.id,
         user_name=current_user.name,
@@ -168,17 +193,127 @@ async def assist_reservation(
     )
 
     try:
-        result = await agent.run(
-            request.message,
-            deps=deps,
-        )
+        logger.info(f"[Agent] 用户消息: {request.message}")
 
-        agent_output = result.output
-        text_output = (
-            agent_output.model_dump_json()
-            if hasattr(agent_output, "model_dump_json")
-            else str(agent_output)
-        )
+        intent_parser = get_intent_parser()
+        intent_result = await intent_parser.run(request.message, deps=deps)
+
+        logger.info(f"[Agent] intent_result raw: {intent_result.output}")
+
+        intent_text = str(intent_result.output)
+        intent_data = _parse_intent_json(intent_text)
+
+        logger.info(f"[Agent] 意图解析结果: {intent_data}")
+
+        parsed_message = request.message
+        intent_parts = []
+        if intent_data.get("keyword"):
+            intent_parts.append(f"实验室类型：{intent_data['keyword']}")
+        if intent_data.get("equipment"):
+            intent_parts.append(f"所需设备：{intent_data['equipment']}")
+        if intent_data.get("date"):
+            intent_parts.append(f"预约日期：{intent_data['date']}")
+        if (
+            intent_data.get("start_hour") is not None
+            and intent_data.get("end_hour") is not None
+        ):
+            intent_parts.append(
+                f"预约时间：{intent_data['start_hour']}:00-{intent_data['end_hour']}:00"
+            )
+        if intent_data.get("purpose"):
+            intent_parts.append(f"预约用途：{intent_data['purpose']}")
+
+        if intent_parts:
+            parsed_message = (
+                f"{request.message}\n\n【用户意图解析】{'；'.join(intent_parts)}"
+            )
+            logger.info(f"[Agent] 解析后的消息: {parsed_message}")
+
+        result = await agent.run(parsed_message, deps=deps)
+
+        text_output = str(result.output)
+
+        logger.info(f"[Agent] Agent输出: {text_output}")
+
+        tool_calls = result.tool_calls if hasattr(result, "tool_calls") else None
+        if tool_calls:
+            logger.info(f"[Agent] 工具调用: {[tc.tool_name for tc in tool_calls]}")
+        else:
+            logger.info("[Agent] 工具调用: None")
+
+        is_valid, parsed_data, error_msg = validate_and_parse_agent_output(text_output)
+        logger.info(f"[Agent] 验证结果: is_valid={is_valid}, error={error_msg}")
+
+        if not is_valid:
+            validation_errors += 1
+            context_data["validation_errors"] = validation_errors
+
+            if validation_errors >= MAX_VALIDATION_ERRORS:
+                context_data["messages"].append(
+                    {
+                        "role": "assistant",
+                        "content": f"系统错误：模型连续返回无效格式达 {validation_errors} 次，请稍后再试或联系管理员",
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+                context_file = save_context(current_user.id, context_data)
+                if active_log:
+                    await agent_log_crud.update_context_file(
+                        db, active_log.id, current_user.id, context_file
+                    )
+                await notification_crud.create_notification(
+                    db,
+                    user_id=current_user.id,
+                    title="智能推荐结果",
+                    content="智能助手处理失败，连续返回无效格式，请稍后再试",
+                    notif_type=NOTIF_TYPE_AGENT_RESULT,
+                )
+                return BaseResponse(
+                    data={
+                        "success": False,
+                        "message": "处理失败：模型输出格式连续无效，请稍后再试",
+                    }
+                )
+
+            context_data["messages"].append(
+                {
+                    "role": "assistant",
+                    "content": f"格式验证失败 ({validation_errors}/{MAX_VALIDATION_ERRORS}): {error_msg}",
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+            context_file = save_context(current_user.id, context_data)
+            if active_log:
+                await agent_log_crud.update_context_file(
+                    db, active_log.id, current_user.id, context_file
+                )
+                log_id = active_log.id
+            else:
+                log = await agent_log_crud.create_agent_log(
+                    db,
+                    user_id=current_user.id,
+                    input_message=request.message[:200],
+                    context_file=context_file,
+                )
+                log_id = log.id
+
+            await notification_crud.create_notification(
+                db,
+                user_id=current_user.id,
+                title="智能推荐结果",
+                content=f"处理失败：{error_msg}",
+                notif_type=NOTIF_TYPE_AGENT_RESULT,
+            )
+            return BaseResponse(
+                data={
+                    "success": False,
+                    "message": f"处理失败：{error_msg}",
+                    "log_id": log_id,
+                }
+            )
+
+        validation_errors = 0
+        context_data["validation_errors"] = 0
 
         context_data["messages"].append(
             {
@@ -204,55 +339,23 @@ async def assist_reservation(
             )
             log_id = log.id
 
-        if (
-            agent_output.lab_id
-            and agent_output.lab_name
-            and agent_output.start_time
-            and agent_output.end_time
-        ):
+        lab_id = parsed_data.get("lab_id")
+        lab_name = parsed_data.get("lab_name")
+        address = parsed_data.get("address") or ""
+        start_time = parsed_data.get("start_time") or ""
+        end_time = parsed_data.get("end_time") or ""
+        reason = parsed_data.get("reason", "") or ""
+        purpose = parsed_data.get("purpose") or ""
+
+        if lab_id and lab_name and start_time and end_time:
             suggestion = {
-                "lab_id": agent_output.lab_id,
-                "lab_name": agent_output.lab_name or "",
-                "address": agent_output.address or "",
-                "start_time": agent_output.start_time or "",
-                "end_time": agent_output.end_time or "",
-                "reason": agent_output.reason or "",
-                "purpose": agent_output.purpose or "",
-            }
-            suggestion_json = json.dumps(suggestion, ensure_ascii=False)
-            await notification_crud.create_notification(
-                db,
-                user_id=current_user.id,
-                title="智能推荐结果",
-                content=f"已为您找到合适的实验室：{agent_output.lab_name}",
-                notif_type=NOTIF_TYPE_AGENT_RESULT,
-                related_id=agent_output.lab_id,
-                attachment=suggestion_json,
-            )
-            return BaseResponse(
-                data={
-                    "success": True,
-                    "message": "推荐结果已发送到您的消息通知，请查收",
-                    "log_id": log_id,
-                }
-            )
-        elif agent_output.lab_name and agent_output.reason:
-            lab_name = agent_output.lab_name
-            reason = agent_output.reason
-            time_match = re.search(r"(\d{4}-\d{2}-\d{2}[T\s]?\d{2}:\d{2})", reason)
-            start_time = time_match.group(1) if time_match else ""
-            end_time = ""
-            if start_time:
-                end_match = re.search(r"~(\d{4}-\d{2}-\d{2}[T\s]?\d{2}:\d{2})", reason)
-                end_time = end_match.group(1) if end_match else ""
-            suggestion = {
-                "lab_id": None,
-                "lab_name": lab_name,
-                "address": agent_output.address or "",
-                "start_time": start_time,
-                "end_time": end_time,
-                "reason": reason,
-                "purpose": agent_output.purpose or "",
+                "lab_id": lab_id,
+                "lab_name": lab_name or "",
+                "address": address or "",
+                "start_time": start_time or "",
+                "end_time": end_time or "",
+                "reason": reason or "",
+                "purpose": purpose or "",
             }
             suggestion_json = json.dumps(suggestion, ensure_ascii=False)
             await notification_crud.create_notification(
@@ -261,6 +364,7 @@ async def assist_reservation(
                 title="智能推荐结果",
                 content=f"已为您找到合适的实验室：{lab_name}",
                 notif_type=NOTIF_TYPE_AGENT_RESULT,
+                related_id=lab_id,
                 attachment=suggestion_json,
             )
             return BaseResponse(
@@ -271,36 +375,17 @@ async def assist_reservation(
                 }
             )
         else:
-            suggestion = await build_suggestion_from_db(db, request.message)
-            if suggestion:
-                suggestion_json = json.dumps(suggestion, ensure_ascii=False)
-                await notification_crud.create_notification(
-                    db,
-                    user_id=current_user.id,
-                    title="智能推荐结果",
-                    content=f"已为您找到合适的实验室：{suggestion['lab_name']}",
-                    notif_type=NOTIF_TYPE_AGENT_RESULT,
-                    related_id=suggestion.get("lab_id"),
-                    attachment=suggestion_json,
-                )
-                return BaseResponse(
-                    data={
-                        "success": True,
-                        "message": "推荐结果已发送到您的消息通知，请查收",
-                        "log_id": log_id,
-                    }
-                )
             await notification_crud.create_notification(
                 db,
                 user_id=current_user.id,
                 title="智能推荐结果",
-                content=agent_output.reason or "未找到合适的实验室",
+                content=reason or "未找到合适的实验室",
                 notif_type=NOTIF_TYPE_AGENT_RESULT,
             )
             return BaseResponse(
                 data={
                     "success": False,
-                    "message": "推荐结果已发送到您的消息通知，请查收",
+                    "message": reason or "未找到合适的实验室",
                     "log_id": log_id,
                 }
             )
