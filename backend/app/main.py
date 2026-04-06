@@ -23,6 +23,13 @@ from app.api.v1.statistics import router as statistics_router
 
 app = FastAPI(title="LabFlow", version="0.1.0")
 
+
+@app.get("/health")
+async def health_check():
+    """健康检查端点"""
+    return {"status": "ok", "service": "LabFlow"}
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],

@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
@@ -19,6 +19,25 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [localError, setLocalError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [systemStatus, setSystemStatus] = useState({ ok: false, message: '检测中...' });
+
+    useEffect(() => {
+        const checkHealth = async () => {
+            try {
+                const res = await fetch('http://localhost:8000/health');
+                if (res.ok) {
+                    setSystemStatus({ ok: true, message: '系统运行正常' });
+                } else {
+                    setSystemStatus({ ok: false, message: '后端服务异常' });
+                }
+            } catch {
+                setSystemStatus({ ok: false, message: '后端服务连接失败' });
+            }
+        };
+        checkHealth();
+        const interval = setInterval(checkHealth, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleChange = (e) => {
         setForm({
@@ -147,9 +166,9 @@ export default function LoginPage() {
                 </div>
 
                 <div className="mt-6 text-center">
-                    <div className="inline-flex items-center space-x-2 text-xs text-gray-400">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                        <span>系统运行正常</span>
+                    <div className={`inline-flex items-center space-x-2 text-xs ${systemStatus.ok ? 'text-gray-400' : 'text-red-500'}`}>
+                        <span className={`w-2 h-2 rounded-full ${systemStatus.ok ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                        <span>{systemStatus.message}</span>
                     </div>
                 </div>
             </div>

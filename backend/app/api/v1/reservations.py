@@ -41,6 +41,7 @@ async def list_reservations(
     page_size: int = Query(20, ge=1, le=100),
     status: Optional[int] = Query(None, ge=0, le=4),
     lab_id: Optional[int] = Query(None),
+    active_only: bool = Query(False, description="仅返回尚未结束的预约"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -52,7 +53,7 @@ async def list_reservations(
 
         skip = (page - 1) * page_size
         reservations, total = await get_all_reservations(
-            db, skip, page_size, status, lab_id
+            db, skip, page_size, status, lab_id, active_only
         )
 
         items = []

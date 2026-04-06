@@ -334,16 +334,14 @@ export default function LabPage() {
                         try {
                           const [instRes, res0Res, res1Res] = await Promise.all([
                             api.get('/instruments', { params: { lab_id: lab.id, page: 1, page_size: 100 } }),
-                            api.get('/reservations', { params: { lab_id: lab.id, page: 1, page_size: 100, status: 0 } }),
-                            api.get('/reservations', { params: { lab_id: lab.id, page: 1, page_size: 100, status: 1 } }),
+                            api.get('/reservations', { params: { lab_id: lab.id, page: 1, page_size: 100, status: 0, active_only: true } }),
+                            api.get('/reservations', { params: { lab_id: lab.id, page: 1, page_size: 100, status: 1, active_only: true } }),
                           ]);
                           const instruments = instRes.data?.items || [];
                           const pending = res0Res.data?.items || [];
                           const approved = res1Res.data?.items || [];
-                          const now = new Date();
-                          const allReservations = [...pending, ...approved].filter(r => new Date(r.end_time) >= now);
                           setDeleteInstruments(instruments);
-                          setDeleteReservations(allReservations);
+                          setDeleteReservations([...pending, ...approved]);
                         } catch (err) {
                           setDeleteInstruments([]);
                           setDeleteReservations([]);
