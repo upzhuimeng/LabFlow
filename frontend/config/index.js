@@ -4,8 +4,18 @@
 // Author: zhuimeng
 // Description: 前端配置文件
 
+const DEFAULT_BACKEND_BASE_URL = 'http://localhost:8000';
+
+const backendBaseUrl = (
+  process.env.NEXT_PUBLIC_BACKEND_BASE_URL
+  || process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api\/v1\/?$/, '')
+  || DEFAULT_BACKEND_BASE_URL
+).replace(/\/$/, '');
+
 const config = {
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1',
+  BACKEND_BASE_URL: backendBaseUrl,
+  API_BASE_URL: `${backendBaseUrl}/api/v1`,
+  LOGIN_HEALTH_URL: `${backendBaseUrl}/health`,
 
   API_ENDPOINTS: {
     AUTH: {

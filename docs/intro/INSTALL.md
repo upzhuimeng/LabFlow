@@ -106,7 +106,7 @@ cp .env.local.example .env.local
 编辑 `.env.local`，设置 API 地址：
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+NEXT_PUBLIC_BACKEND_BASE_URL=http://localhost:8000
 # 开发环境可使用 http://localhost:8000/api/v1
 # 生产环境使用 https://your-domain.com/api/v1
 ```
@@ -228,7 +228,7 @@ LabFlow/
 
 ### Q: 前端无法登录？
 
-检查后端是否正常运行（http://localhost:8000），以及 `.env.local` 中的 `NEXT_PUBLIC_API_BASE_URL` 是否正确。
+检查后端是否正常运行（http://localhost:8000），以及 `.env.local` 中的 `NEXT_PUBLIC_BACKEND_BASE_URL` 是否正确。
 
 ### Q: 端口被占用？
 
