@@ -6,8 +6,14 @@
 
 const DEFAULT_BACKEND_BASE_URL = 'http://localhost:8000';
 
+const runtimeBackendBaseUrl =
+  typeof window !== 'undefined'
+    ? window.labflowRuntimeConfig?.backendBaseUrl
+    : undefined;
+
 const backendBaseUrl = (
-  process.env.NEXT_PUBLIC_BACKEND_BASE_URL
+  runtimeBackendBaseUrl
+  || process.env.NEXT_PUBLIC_BACKEND_BASE_URL
   || process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api\/v1\/?$/, '')
   || DEFAULT_BACKEND_BASE_URL
 ).replace(/\/$/, '');

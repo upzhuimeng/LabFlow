@@ -115,6 +115,52 @@ npm run dev
 
 ---
 
+## 桌面封装（Windows）
+
+### 后端单文件封装（uv + PyInstaller）
+
+```powershell
+cd backend
+.\build_backend_onefile.ps1
+```
+
+产物：`backend\dist\LabFlowBackend.exe`  
+运行方式：将 `LabFlowBackend.exe` 与 `.env` 放在同一目录后直接运行。
+
+### 前端单文件封装（Electron Portable）
+
+```powershell
+cd frontend
+npm install
+npm run electron:dist
+```
+
+产物：
+- `frontend\dist-electron\LabFlowFrontend 0.1.0.exe`
+- `frontend\dist-electron\frontend.config.json`
+- `frontend\dist-electron\portable-release\`（仅含 exe + 配置文件）
+
+`frontend.config.json` 示例：
+
+```json
+{
+  "backendBaseUrl": "http://127.0.0.1:8000",
+  "frontendPort": 3210
+}
+```
+
+说明：
+- Electron 封装使用 `frontend.config.json` 做运行时配置，不依赖与后端同目录部署。
+- `.env.local` 属于前端构建时变量；分发后推荐改 `frontend.config.json`，无需重打包。
+
+### Cookie / 登录态持久化
+
+前端 Electron 默认会持久化 Cookie 和本地存储到系统用户目录（`app.getPath('userData')`），因此**程序退出后登录态通常会保留**。如需清空，可在系统中删除该应用用户数据目录。
+
+完整可复现封装流程见：`docs/BINARY_PACKAGING_REPRODUCIBLE.md`
+
+---
+
 ## 测试账号
 
 | 类型 | 账号 | 密码 | 角色 |

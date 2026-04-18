@@ -7,6 +7,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import sys
 from app.core.config import setting
 from app.exceptions.handlers import register_exception_handlers
 from app.api.v1.auth import router as auth_router
@@ -70,10 +71,11 @@ app.include_router(statistics_router)
 
 if __name__ == "__main__":
     app_env = setting.app_env
+    is_frozen = getattr(sys, "frozen", False)
 
     uvicorn.run(
         "app.main:app",
         host=app_env.HOST,
         port=app_env.PORT,
-        reload=app_env.RELOAD,
+        reload=False if is_frozen else app_env.RELOAD,
     )
