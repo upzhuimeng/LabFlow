@@ -5,3 +5,11 @@
 archive/
 archived/
 .ruff_cache/
+
+# Packaging artifacts
+backend/dist/
+backend/build/
+backend/*.spec
+frontend/dist-electron/
+release/*
+!release/.gitkeep

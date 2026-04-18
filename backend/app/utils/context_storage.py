@@ -6,9 +6,16 @@ import json
 import hashlib
 from pathlib import Path
 from datetime import datetime
+import sys
 
 
-CONTEXT_DIR = Path(__file__).parent.parent.parent / "data" / "agent_contexts"
+def _resolve_context_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent / "data" / "agent_contexts"
+    return Path(__file__).resolve().parent.parent.parent / "data" / "agent_contexts"
+
+
+CONTEXT_DIR = _resolve_context_dir()
 CONTEXT_DIR.mkdir(parents=True, exist_ok=True)
 
 
