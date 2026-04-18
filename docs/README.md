@@ -18,6 +18,7 @@
 ## 设计文档
 
 - [项目概述](./intro/introduction.md) - 设计目的、关键技术、作品特色
+- [二进制封装复现指南（Windows）](./BINARY_PACKAGING_REPRODUCIBLE.md) - 从依赖初始化到封装产物分发的完整流程
 
 ---
 

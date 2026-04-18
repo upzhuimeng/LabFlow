@@ -157,6 +157,8 @@ npm run electron:dist
 
 前端 Electron 默认会持久化 Cookie 和本地存储到系统用户目录（`app.getPath('userData')`），因此**程序退出后登录态通常会保留**。如需清空，可在系统中删除该应用用户数据目录。
 
+完整可复现封装流程见：`docs/BINARY_PACKAGING_REPRODUCIBLE.md`
+
 ---
 
 ## 测试账号
