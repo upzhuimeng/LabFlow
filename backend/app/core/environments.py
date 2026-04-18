@@ -15,3 +15,16 @@ class AppEnv:
         self.RELOAD: bool = Validator.bool_validator(
             "RELOAD", os.getenv("RELOAD", "False")
         )
+        cors_origins = os.getenv(
+            "CORS_ALLOW_ORIGINS",
+            "*",
+        )
+        parsed_origins = [
+            origin.strip() for origin in cors_origins.split(",") if origin.strip()
+        ]
+        self.CORS_ALLOW_ALL_ORIGINS: bool = (
+            len(parsed_origins) == 1 and parsed_origins[0] == "*"
+        )
+        self.CORS_ALLOW_ORIGINS: list[str] = (
+            ["*"] if self.CORS_ALLOW_ALL_ORIGINS else parsed_origins
+        )

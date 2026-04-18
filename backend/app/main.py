@@ -20,7 +20,6 @@ from app.api.v1.notifications import router as notifications_router
 from app.api.v1.agent import router as agent_router
 from app.api.v1.statistics import router as statistics_router
 
-
 app = FastAPI(title="LabFlow", version="0.1.0")
 
 
@@ -44,7 +43,12 @@ async def health_check():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=(
+        []
+        if setting.app_env.CORS_ALLOW_ALL_ORIGINS
+        else setting.app_env.CORS_ALLOW_ORIGINS
+    ),
+    allow_origin_regex=".*" if setting.app_env.CORS_ALLOW_ALL_ORIGINS else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
