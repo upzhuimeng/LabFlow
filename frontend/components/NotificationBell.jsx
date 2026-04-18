@@ -23,7 +23,9 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
-    fetchUnreadCount();
+    const initTimer = setTimeout(() => {
+      void fetchUnreadCount();
+    }, 0);
     const interval = setInterval(fetchUnreadCount, 10000);
     
     const handleNotificationRefresh = () => {
@@ -32,6 +34,7 @@ export default function NotificationBell() {
     window.addEventListener('notification:refresh', handleNotificationRefresh);
     
     return () => {
+      clearTimeout(initTimer);
       clearInterval(interval);
       window.removeEventListener('notification:refresh', handleNotificationRefresh);
     };

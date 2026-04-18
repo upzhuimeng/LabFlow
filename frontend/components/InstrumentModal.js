@@ -17,20 +17,24 @@ export default function InstrumentModal({ isOpen, onClose, onSubmit, initialData
         remark: '',
     });
 
+    const buildFormData = (data) => ({
+        name: data?.name || '',
+        model: data?.model || '',
+        manufacturer: data?.manufacturer || '',
+        supplier: data?.supplier || '',
+        purchase_date: data?.purchase_date || '',
+        price: data?.price || '',
+        status: data?.status ?? 0,
+        lab_id: data?.lab_id || '',
+        remark: data?.remark || '',
+    });
+
     useEffect(() => {
-        if (initialData) {
-            setFormData({
-                name: initialData.name || '',
-                model: initialData.model || '',
-                manufacturer: initialData.manufacturer || '',
-                supplier: initialData.supplier || '',
-                purchase_date: initialData.purchase_date || '',
-                price: initialData.price || '',
-                status: initialData.status ?? 0,
-                lab_id: initialData.lab_id || '',
-                remark: initialData.remark || '',
-            });
-        }
+        const timer = setTimeout(() => {
+            setFormData(buildFormData(initialData));
+        }, 0);
+
+        return () => clearTimeout(timer);
     }, [initialData]);
 
     const handleChange = (e) => {

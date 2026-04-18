@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import config from '@/config';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -24,7 +25,7 @@ export default function LoginPage() {
     useEffect(() => {
         const checkHealth = async () => {
             try {
-                const res = await fetch('http://localhost:8000/health');
+                const res = await fetch(config.LOGIN_HEALTH_URL);
                 const data = await res.json();
                 if (data.status === 'ok' && data.database === 'ok') {
                     setSystemStatus({ ok: true, message: '系统运行正常' });

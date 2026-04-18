@@ -61,8 +61,12 @@ export default function EntryPage() {
   }, []);
 
   useEffect(() => {
-    fetchLabs();
-    fetchUsers();
+    const timer = setTimeout(() => {
+      void fetchLabs();
+      void fetchUsers();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [fetchLabs, fetchUsers]);
 
   const showSuccess = (message) => {

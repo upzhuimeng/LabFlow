@@ -14,29 +14,23 @@ export default function LabModal({ isOpen, onClose, onSubmit, initialData, varia
     });
     const [errors, setErrors] = useState({});
 
+    const buildFormData = (data) => ({
+        name: data?.name || '',
+        address: data?.address || '',
+        capacity: data?.capacity || '',
+        status: data?.status || '正常',
+        manager: data?.manager || '',
+        phone: data?.phone || '',
+        description: data?.description || '',
+    });
+
     useEffect(() => {
-        if (initialData) {
-            setFormData({
-                name: initialData.name || '',
-                address: initialData.address || '',
-                capacity: initialData.capacity || '',
-                status: initialData.status || '正常',
-                manager: initialData.manager || '',
-                phone: initialData.phone || '',
-                description: initialData.description || '',
-            });
-        } else {
-            setFormData({
-                name: '',
-                address: '',
-                capacity: '',
-                status: '正常',
-                manager: '',
-                phone: '',
-                description: '',
-            });
-        }
-        setErrors({});
+        const timer = setTimeout(() => {
+            setFormData(buildFormData(initialData));
+            setErrors({});
+        }, 0);
+
+        return () => clearTimeout(timer);
     }, [initialData, isOpen]);
 
     const validateForm = () => {
