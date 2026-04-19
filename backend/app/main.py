@@ -4,10 +4,15 @@
 # Author: zhuimeng
 # Description: FastAPI 主程序
 
+import sys
+import os
+# PyInstaller onefile 环境下禁用 Pydantic 插件自动加载，避免 logfire 插件在无源码上下文崩溃
+if getattr(sys, "frozen", False):
+    os.environ.setdefault("PYDANTIC_DISABLE_PLUGINS", "__all__")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-import sys
 from app.core.config import setting
 from app.exceptions.handlers import register_exception_handlers
 from app.api.v1.auth import router as auth_router
@@ -74,7 +79,7 @@ if __name__ == "__main__":
     is_frozen = getattr(sys, "frozen", False)
 
     uvicorn.run(
-        "app.main:app",
+        app if is_frozen else "app.main:app",
         host=app_env.HOST,
         port=app_env.PORT,
         reload=False if is_frozen else app_env.RELOAD,

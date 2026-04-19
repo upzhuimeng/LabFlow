@@ -118,12 +118,35 @@ Copy-Item .\frontend\dist-electron\portable-release\frontend.config.json .\relea
 后端使用 `python-dotenv` 的 `load_dotenv()` 读取 `.env`。  
 封装版与 WebUI 开发版均沿用该方式，配置行为一致。
 
+后端封装版的配置文件位置要求：
+
+- `LabFlowBackend.exe` 与 `.env` 必须放在**同一目录**
+- 若放在不同目录，后端将无法按预期读取配置并可能启动失败
+
 ### 5.2 前端配置加载
 
 - WebUI 模式：使用 `.env.local`（构建时注入）
 - Electron 封装模式：优先读取 `frontend.config.json`（运行时读取，可改后直接生效）
 
-因此分发多个前端副本时，推荐每个副本单独维护自己的 `frontend.config.json`。
+前端封装版的配置文件位置要求：
+
+- `LabFlowFrontend 0.1.0.exe` 与 `frontend.config.json` 必须放在**同一目录**
+- 若将配置文件放到其他目录，前端会回退到默认地址，常见表现为“后端服务连接失败”
+
+`frontend.config.json` 字段要求：
+
+```json
+{
+  "backendBaseUrl": "http://127.0.0.1:8000",
+  "frontendPort": 3210
+}
+```
+
+- `backendBaseUrl`：后端服务基地址（必须包含协议与端口）
+- `frontendPort`：前端内置服务端口（建议保留默认 3210，避免端口冲突时再修改）
+- 文件编码建议 UTF-8（带或不带 BOM 均可）
+
+因此分发多个前端副本时，推荐每个副本单独维护自己的 `frontend.config.json`，且与对应 exe 同目录放置。
 
 ### 5.3 Cookie / 登录态
 

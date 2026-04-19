@@ -1,7 +1,7 @@
 const path = require("node:path");
 const fs = require("node:fs");
 const http = require("node:http");
-const { app, BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, Menu, dialog } = require("electron");
 
 const DEFAULT_CONFIG = {
   backendBaseUrl: "http://127.0.0.1:8000",
@@ -10,8 +10,16 @@ const DEFAULT_CONFIG = {
 
 let nextServerStarted = false;
 
+function resolveConfigBaseDir() {
+  return (
+    process.env.PORTABLE_EXECUTABLE_DIR ||
+    path.dirname(process.env.PORTABLE_EXECUTABLE_FILE || "") ||
+    path.dirname(process.execPath)
+  );
+}
+
 function getRuntimeConfigPath() {
-  return path.join(path.dirname(process.execPath), "frontend.config.json");
+  return path.join(resolveConfigBaseDir(), "frontend.config.json");
 }
 
 function loadRuntimeConfig() {
@@ -22,7 +30,7 @@ function loadRuntimeConfig() {
 
   try {
     const raw = fs.readFileSync(configPath, "utf-8");
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw.replace(/^\uFEFF/, ""));
     return {
       backendBaseUrl: (parsed.backendBaseUrl || DEFAULT_CONFIG.backendBaseUrl).replace(/\/$/, ""),
       frontendPort: Number(parsed.frontendPort || DEFAULT_CONFIG.frontendPort),
@@ -130,15 +138,17 @@ async function createWindow() {
     width: 1280,
     height: 820,
     show: false,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false,
     },
   });
 
   mainWindow.once("ready-to-show", () => {
+    mainWindow.setMenuBarVisibility(false);
     mainWindow.show();
   });
 
@@ -146,6 +156,8 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  Menu.setApplicationMenu(null);
+
   try {
     await createWindow();
   } catch (error) {

@@ -20,6 +20,10 @@ uv run --with pyinstaller pyinstaller `
     --name LabFlowBackend `
     --paths $ProjectRoot `
     --collect-submodules app `
+    --collect-all asyncmy `
+    --recursive-copy-metadata pydantic-ai `
+    --recursive-copy-metadata pydantic-ai-slim `
+    --copy-metadata genai-prices `
     --add-data "$ProjectRoot\.env.example;." `
     $entryScript
 

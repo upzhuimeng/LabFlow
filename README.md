@@ -152,6 +152,8 @@ npm run electron:dist
 说明：
 - Electron 封装使用 `frontend.config.json` 做运行时配置，不依赖与后端同目录部署。
 - `.env.local` 属于前端构建时变量；分发后推荐改 `frontend.config.json`，无需重打包。
+- `LabFlowFrontend 0.1.0.exe` 与 `frontend.config.json` 需放在同一目录。
+- `LabFlowBackend.exe` 与 `.env` 需放在同一目录。
 
 ### Cookie / 登录态持久化
 
